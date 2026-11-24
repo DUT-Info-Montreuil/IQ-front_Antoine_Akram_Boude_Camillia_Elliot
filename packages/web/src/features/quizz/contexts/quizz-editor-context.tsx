@@ -18,7 +18,7 @@ import type {
   QuizzMode,
   QuizzWithId,
 } from "@razzia/common/types/game"
-import { QUESTION_TYPES, QUIZZ_MODES } from "@razzia/common/constants"
+import { MAX_POINTS, QUESTION_TYPES, QUIZZ_MODES } from "@razzia/common/constants"
 import {
   quizzValidator,
   type QuizzValidated,
@@ -45,7 +45,7 @@ interface QuizzEditorContextType {
   reorderQuestions: (_from: number, _to: number) => void
   updateQuestion: (_index: number, _updates: Partial<Question>) => void
   questionPath: <K extends FieldPath<Question>>(
-    _field: K,
+      _field: K,
   ) => `questions.${number}.${K}`
 }
 
@@ -55,28 +55,45 @@ const defaultQuestion = (): Question => ({
   type: QUESTION_TYPES.SINGLE,
   question: "",
   answers: ["", ""],
+  answerPoints: [MAX_POINTS, 0],
   solutions: [0],
   cooldown: 5,
   time: 20,
 })
 
 const clampIndex = (index: number, length: number) =>
-  Math.max(0, Math.min(index, length - 1))
+    Math.max(0, Math.min(index, length - 1))
 
 type QuizzEditorProviderProps = PropsWithChildren<{
   initialData?: QuizzWithId
 }>
 
 export const QuizzEditorProvider = ({
-  children,
-  initialData,
-}: QuizzEditorProviderProps) => {
+                                      children,
+                                      initialData,
+                                    }: QuizzEditorProviderProps) => {
   const form = useForm<QuizzFormValues, unknown, QuizzValidated>({
     resolver: zodResolver(quizzValidator),
     defaultValues: {
       gameMode: initialData?.gameMode ?? QUIZZ_MODES.QUIZ,
       subject: initialData?.subject ?? "Untitled Quizz",
-      questions: initialData ? initialData.questions : [defaultQuestion()],
+      questions: initialData
+          ? initialData.questions.map((question) => ({
+            ...question,
+            ...(question.answerPoints
+                ? {}
+                : {
+                  answerPoints: question.answers.map((_, index) =>
+                      question.solutions?.includes(index)
+                          ? Math.floor(
+                              (question.maxPoints ?? MAX_POINTS) /
+                              Math.max(question.solutions?.length ?? 1, 1),
+                          )
+                          : 0,
+                  ),
+                }),
+          }))
+          : [defaultQuestion()],
     },
   })
 
@@ -124,39 +141,39 @@ export const QuizzEditorProvider = ({
   }
 
   const questionPath = <K extends FieldPath<Question>>(field: K) =>
-    `questions.${currentIndex}.${field}` as const
+      `questions.${currentIndex}.${field}` as const
 
   const updateQuestion = (index: number, updates: Partial<Question>) => {
     setValue(
-      `questions.${index}`,
-      { ...getValues(`questions.${index}`), ...updates },
-      { shouldValidate: formState.isSubmitted, shouldDirty: true },
+        `questions.${index}`,
+        { ...getValues(`questions.${index}`), ...updates },
+        { shouldValidate: formState.isSubmitted, shouldDirty: true },
     )
   }
 
   return (
-    <FormProvider {...form}>
-      <QuizzEditorContext.Provider
-        value={{
-          quizzId: initialData?.id ?? null,
-          gameMode,
-          questions,
-          questionIds,
-          currentIndex,
-          currentQuestion,
-          currentQuestionId: questionIds[safeIndex],
-          isRemoving: removingFrom === questions,
-          setCurrentIndex,
-          addQuestion,
-          removeQuestion,
-          reorderQuestions,
-          updateQuestion,
-          questionPath,
-        }}
-      >
-        {children}
-      </QuizzEditorContext.Provider>
-    </FormProvider>
+      <FormProvider {...form}>
+        <QuizzEditorContext.Provider
+            value={{
+              quizzId: initialData?.id ?? null,
+              gameMode,
+              questions,
+              questionIds,
+              currentIndex,
+              currentQuestion,
+              currentQuestionId: questionIds[safeIndex],
+              isRemoving: removingFrom === questions,
+              setCurrentIndex,
+              addQuestion,
+              removeQuestion,
+              reorderQuestions,
+              updateQuestion,
+              questionPath,
+            }}
+        >
+          {children}
+        </QuizzEditorContext.Provider>
+      </FormProvider>
   )
 }
 
