@@ -101,8 +101,13 @@ const CoursEditeurPage = () => {
 
           <button
             className={bouton.citron}
-            disabled
-            title={t("manager:cours.bientot")}
+            disabled={!cours.data}
+            onClick={() =>
+              navigate({
+                to: "/manager/cours/presenter/$coursId",
+                params: { coursId },
+              })
+            }
           >
             <Play className="size-4 fill-current" />
             {t("manager:cours.presenter")}

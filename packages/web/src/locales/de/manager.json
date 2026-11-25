@@ -98,5 +98,29 @@
     "astuce": "Tip: a quiz right after a difficult notion is the best moment to check it is understood.",
     "mock": "Demo mode",
     "mockDescription": "Data simulated in the browser until the /api/cours API is ready"
+  },
+  "seance": {
+    "ouvrirQuiz": "Open a quiz",
+    "ouvrir": "Open the quiz",
+    "choixQuizDescription": "Choose the quiz to start now. Soon it will open by itself when reaching its page in the outline.",
+    "aucunQuiz": "No quiz available: create one in the Razzia quizzes area.",
+    "terminer": "End the session",
+    "terminerConfirmation": "The presentation stops and connected students are disconnected from the quiz.",
+    "pageDuDeroule": "Page {{page}} / {{total}} of the outline",
+    "nbQuestions": "{{nb}} questions",
+    "quiz": "Quiz",
+    "sortezTelephones": "Phones out!",
+    "etapeScanner": "Scan the QR code or type the code",
+    "etapeConnexion": "Sign in with your university account",
+    "etapePseudo": "Pick a nickname: it is what shows up here",
+    "etudiantsConnectes": "students connected",
+    "enDirect": "live",
+    "enAttente": "Waiting for the first students...",
+    "retirer": "Remove {{pseudo}} from the quiz",
+    "autres": "+ {{nb}} more",
+    "qrCode": "QR code to join the quiz",
+    "ouSur": "or on",
+    "avecLeCode": "with the code",
+    "lancerQuestion": "Start question {{numero}}"
   }
 }

@@ -98,5 +98,29 @@
     "astuce": "Astuce : un quiz juste après une notion difficile, c'est le meilleur moment pour vérifier qu'elle est comprise.",
     "mock": "Mode démo",
     "mockDescription": "Données simulées dans le navigateur, en attendant l'API /api/cours"
+  },
+  "seance": {
+    "ouvrirQuiz": "Ouvrir un quiz",
+    "ouvrir": "Ouvrir le quiz",
+    "choixQuizDescription": "Choisissez le quiz à lancer maintenant. Bientôt, il s'ouvrira tout seul en arrivant sur sa page du déroulé.",
+    "aucunQuiz": "Aucun quiz disponible : créez-en un dans l'espace Quiz Razzia.",
+    "terminer": "Terminer la séance",
+    "terminerConfirmation": "La présentation s'arrête et les étudiants connectés sont déconnectés du quiz.",
+    "pageDuDeroule": "Page {{page}} / {{total}} du déroulé",
+    "nbQuestions": "{{nb}} questions",
+    "quiz": "Quiz",
+    "sortezTelephones": "Sortez vos téléphones !",
+    "etapeScanner": "Scannez le QR code ou tapez le code",
+    "etapeConnexion": "Connectez-vous avec votre compte IUT",
+    "etapePseudo": "Choisissez un pseudo : c'est lui qui s'affiche ici",
+    "etudiantsConnectes": "étudiants connectés",
+    "enDirect": "en direct",
+    "enAttente": "En attente des premiers étudiants...",
+    "retirer": "Retirer {{pseudo}} du quiz",
+    "autres": "+ {{nb}} autres",
+    "qrCode": "QR code pour rejoindre le quiz",
+    "ouSur": "ou sur",
+    "avecLeCode": "avec le code",
+    "lancerQuestion": "Lancer la question {{numero}}"
   }
 }
