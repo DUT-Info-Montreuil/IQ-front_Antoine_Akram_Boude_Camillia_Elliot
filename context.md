@@ -105,8 +105,8 @@ Noms en français sans accent. Les éléments repris de Razzia gardent leur nom 
 - `cours` (id, titre, code_ressource, dates, #id_proprietaire)
 - `partage_cours` (#id_cours, #id_utilisateur, droit LECTURE|EDITION, date_partage)
 - `version_pdf` (id, #id_cours, numero, chemin_fichier, nb_pages, taille_octets, date_import). La version courante est celle de plus grand numéro.
-- `quiz` (id, #id_cours, titre, mode_affichage CLASSEMENT|STATISTIQUES|AUCUN, afficher_leaderboard, sert_notation, statut_placement PLACE|MIS_DE_COTE, apres_page, rang, ordre_mise_de_cote)
-- `question` (id, #id_quiz, ordre, type QCM|RELIER|LIBRE, enonce, duree_secondes 5–300, points_max)
+- `quiz` (id, #id_cours, titre, mode_affichage CLASSEMENT|STATISTIQUES|AUCUN, afficher_leaderboard, sert_notation, statut_placement PLACE|MIS_DE_COTE, apres_page, rang, ordre_mise_de_cote, options_partie jsonb)
+- `question` (id, #id_quiz, ordre, type QCM|RELIER|LIBRE, enonce, duree_secondes 5–300, points_max, options jsonb)
 - `proposition` (id, #id_question, ordre, libelle, est_correcte, points)
 - `paire` (id, #id_question, ordre, element_gauche, element_droit)
 - `expression_correction` (id, #id_question, ordre, motif, points)
@@ -114,6 +114,8 @@ Noms en français sans accent. Les éléments repris de Razzia gardent leur nom 
 - `seance` (#id_version, #id_animateur, code_acces, statut OUVERTE|TERMINEE), `participation` (pseudo unique dans la séance, anonymise)
 - `lancement` (ouverture d'une question en séance, date_cloture_prevue, statut OUVERTE|CLOSE)
 - `reponse` (contenu, temps_restant_ms, points_reponse, points_classement, mode_correction AUTO|A_CORRIGER|MANUELLE), `correction`, `journal_anonymisation`
+
+Le schéma est implémenté avec Drizzle dans `packages/socket/src/db/` et décrit dans `BD.md`. La migration `0001` ajoute `question.options` et `quiz.options_partie` (jsonb), absents du dossier, pour les réglages Razzia saisis dans E4.
 
 Règles clés (RG) :
 - **RG-06** : un quiz a au moins une question ; une question a une durée et des points max.
@@ -155,18 +157,19 @@ Codes de retour : 400 saisie, 401, 403 droit, 404, 409 conflit d'état, 410 trop
 | `GET /api/cours/{id}/versions/{n}/fichier` | Lecture | `application/pdf` |
 | `POST /api/cours/{id}/versions` | Propriétaire | nouvelle version, éléments mis de côté |
 | `PUT /api/cours/{id}/deroule` | Édition | positions des quiz et pages de classement |
-| `POST /api/cours/{id}/quiz` | Édition | `QuizSaisie` → 201 `Quiz` |
-| `GET` / `PUT` / `DELETE /api/quiz/{id}` | Lecture / Édition | 409 si une question est ouverte |
+| `POST /api/cours/{id}/quiz` | Édition | `QuizSaisie` → 201 `Quiz` ; 400 saisie ou page inexistante |
+| `GET` / `PUT` / `DELETE /api/quiz/{id}` | Lecture / Édition | 409 si une question est ouverte ; `DELETE ?forcer=true` supprime aussi les réponses (409 sinon) |
 | `POST /api/quiz/expressions/test` | Enseignant | `{motif, exemples[]}` |
 | `POST /api/seances` | Lecture du cours | `{idCours}` → `{idSeance, codeAcces, urlAcces}` |
 | `GET /api/acces/{code}` | Public | `{idSeance, titreCours}` |
 | `POST /api/seances/{id}/participants` | Étudiant | `{pseudo}` → `{participation, ticket}` |
 
 Objets principaux :
-- `CoursResume` : id, titre, codeRessource, proprietaire, droit, versionCourante, nbQuiz, dateModification.
-- `ElementDeroule` : type QUIZ|PAGE_CLASSEMENT, id, titre, apresPage, rang, ordreMiseDeCote.
-- `QuizSaisie` : titre, apresPage, rang, modeAffichage, afficherLeaderboard, sertNotation, questions[].
-- `QuestionSaisie` : type, enonce, dureeSecondes, pointsMax, propositions[], paires[], expressions[].
+- `CoursResume` : id, titre, codeRessource, proprietaire, droit, versionCourante, nbPages, nbQuiz, dateModification.
+- `ElementDeroule` : type QUIZ|PAGE_CLASSEMENT, id, titre, apresPage, rang, ordreMiseDeCote, nbQuestions, dureeSecondes.
+- `QuizSaisie` : titre, apresPage, rang, modeAffichage, afficherLeaderboard, sertNotation, optionsPartie, questions[]. Schéma zod partagé : `common/src/validators/quiz.ts`.
+- `QuestionSaisie` : type, enonce, dureeSecondes, pointsMax, propositions[], paires[], expressions[], options.
+- `Quiz` : `QuizSaisie` + id, idCours.
 
 Événements temps réel ajoutés par IQ : `manager:openQuiz`, `manager:endQuiz`, `player:matchedPairs`, `player:freeAnswer`, statut `SHOW_STATS`. Les autres reprennent les noms Razzia (`manager:advance`, `player:login`, `player:selectedAnswer`, `game:status`…).
 
@@ -185,13 +188,21 @@ Modules front IQ :
 - `features/seance/` : salle d'attente E5, contexte de séance, `moteur.ts` (adaptateur vers le moteur Razzia).
 - `pages/manager/cours/` : `index` (E2), `$coursId` (E3), `quiz.$coursId` (E4), `presenter.$coursId` (présentation).
 
-**Le back IQ n'existe pas encore.** Le front fonctionne sur des **mocks** qui respectent les contrats ci-dessus, et `VITE_API_MOCK=false` bascule sur les vraies routes. Le temps réel passe par le moteur Razzia existant : `moteur.ts` copie le quiz IQ au format QCM Razzia et crée la partie, en attendant `manager:openQuiz`. Le moteur ne joue que les QCM : en séance, les questions « relier » et « libre » sont ignorées avec un message.
+**État du back** (`packages/socket`, branches `feat-back/*`) :
+- Base PostgreSQL et Drizzle (SCRUM-67), décrite dans `BD.md`.
+- SCRUM-49 « Importer un support PDF » : `GET/POST /api/cours`, `GET /api/cours/{id}`, `GET …/versions/{n}/fichier` (CoursService, PdfService).
+- SCRUM-56 « Insérer un quiz dans le cours » : `POST /api/cours/{id}/quiz`, `GET/PUT/DELETE /api/quiz/{id}` (QuizService). Le quiz est rangé à son rang après sa page, les autres quiz de la page sont décalés.
+- Limites communes : un seul enseignant provisoire (`enseignant`) en attendant le LDAP, routes réservées au gestionnaire Razzia, PDF rangés dans `config/pdf/`.
 
-Ajouts proposés au contrat, à valider avec le back :
+Le front fonctionne encore par défaut sur des **mocks** qui respectent les contrats ci-dessus, et `VITE_API_MOCK=false` bascule sur les vraies routes. Le temps réel passe par le moteur Razzia existant : `moteur.ts` copie le quiz IQ au format QCM Razzia et crée la partie, en attendant `manager:openQuiz`. Le moteur ne joue que les QCM : en séance, les questions « relier » et « libre » sont ignorées avec un message.
+
+Ajouts au contrat proposés par le front, **retenus par le back** :
 - `nbPages` dans `CoursResume` ;
 - `nbQuestions` et `dureeSecondes` dans `ElementDeroule` ;
-- `options` par question (délai de lecture, pénalité, mode de score, catégorie, média, note) ;
-- `optionsPartie` par quiz (pseudos générés, réponses seules).
+- `options` par question (délai de lecture, pénalité, mode de score, catégorie, média, note), colonne `question.options` ;
+- `optionsPartie` par quiz (pseudos générés, réponses seules), colonne `quiz.options_partie`.
+
+Erreurs 409 du QuizService : `errors:seance.questionOuverte`, `errors:seance.quizDejaJoue` (un quiz déjà joué ne peut plus changer de questions) et `errors:seance.reponsesExistantes` (suppression sans `forcer`).
 
 ## 9. Jira
 

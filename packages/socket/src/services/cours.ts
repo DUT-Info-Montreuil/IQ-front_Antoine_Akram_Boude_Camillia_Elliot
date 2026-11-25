@@ -1,9 +1,20 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, or } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from "drizzle-orm"
 import type { ImportCours } from "@razzia/common/validators/cours"
 import { getDb } from "@razzia/socket/db"
 import {
   cours,
   partageCours,
+  question,
   quiz,
   utilisateur,
   versionPdf,
@@ -178,13 +189,24 @@ const lireResumes = async (idUtilisateur: number, idCours?: number) => {
 export const listerCours = async (idUtilisateur: number) =>
   (await lireResumes(idUtilisateur)).map(({ resume }) => resume)
 
-const elementQuiz = (ligne: typeof quiz.$inferSelect) => ({
+/** ElementDeroule, avec nbQuestions et dureeSecondes pour les cartes de quiz de E3. */
+const elementQuiz = ({
+  quiz: ligne,
+  nbQuestions,
+  dureeSecondes,
+}: {
+  quiz: typeof quiz.$inferSelect
+  nbQuestions: number
+  dureeSecondes: number
+}) => ({
   type: "QUIZ" as const,
   id: ligne.idQuiz,
   titre: ligne.titre,
   apresPage: ligne.apresPage,
   rang: ligne.rang ?? 0,
   ordreMiseDeCote: ligne.ordreMiseDeCote,
+  nbQuestions,
+  dureeSecondes,
 })
 
 /** CoursDetail. Les pages de classement rejoindront le déroulé avec SCRUM-18. */
@@ -193,19 +215,25 @@ export const obtenirCours = async (idCours: number, idUtilisateur: number) => {
 
   const [{ resume, versions }] = await lireResumes(idUtilisateur, idCours)
   const sesQuiz = await getDb()
-    .select()
+    .select({
+      quiz,
+      nbQuestions: count(question.idQuestion),
+      dureeSecondes: sql<number>`coalesce(sum(${question.dureeSecondes}), 0)::int`,
+    })
     .from(quiz)
+    .leftJoin(question, eq(question.idQuiz, quiz.idQuiz))
     .where(eq(quiz.idCours, idCours))
+    .groupBy(quiz.idQuiz)
     .orderBy(asc(quiz.apresPage), asc(quiz.rang), asc(quiz.ordreMiseDeCote))
 
   return {
     ...resume,
     versions,
     deroule: sesQuiz
-      .filter((ligne) => ligne.statutPlacement === "PLACE")
+      .filter((ligne) => ligne.quiz.statutPlacement === "PLACE")
       .map(elementQuiz),
     misDeCote: sesQuiz
-      .filter((ligne) => ligne.statutPlacement === "MIS_DE_COTE")
+      .filter((ligne) => ligne.quiz.statutPlacement === "MIS_DE_COTE")
       .map(elementQuiz),
   }
 }

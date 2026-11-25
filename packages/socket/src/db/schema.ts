@@ -1,4 +1,3 @@
-// Schéma IQ, traduction du MLD (dossier de conception V2.1, §4.2). Voir BD.md.
 import { sql } from "drizzle-orm"
 import {
   boolean,
@@ -16,6 +15,11 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core"
+// Schéma IQ, traduction du MLD (dossier de conception V2.1, §4.2). Voir BD.md.
+import type {
+  OptionsPartie,
+  OptionsQuestion,
+} from "@razzia/common/validators/quiz"
 
 // Domaines de valeurs (Tableau 9)
 export const role = pgEnum("role", ["ENSEIGNANT", "ETUDIANT"])
@@ -133,6 +137,11 @@ export const quiz = pgTable("quiz", {
   apresPage: integer("apres_page"),
   rang: integer("rang"),
   ordreMiseDeCote: integer("ordre_mise_de_cote"),
+  // Migration 0001 : réglages de partie repris de Razzia (pseudos générés, réponses seules).
+  optionsPartie: jsonb("options_partie")
+    .$type<OptionsPartie>()
+    .notNull()
+    .default({ pseudosGeneres: false, reponsesSeulement: false }),
 })
 
 export const question = pgTable(
@@ -147,6 +156,15 @@ export const question = pgTable(
     enonce: text("enonce").notNull(),
     dureeSecondes: integer("duree_secondes").notNull().default(30),
     pointsMax: integer("points_max").notNull().default(1000),
+    // Migration 0001 : options avancées (délai de lecture, pénalité, mode de score, catégorie, note, média).
+    options: jsonb("options").$type<OptionsQuestion>().notNull().default({
+      delaiLecture: 3,
+      penalite: 0,
+      modeScore: "STRICT",
+      categorie: "",
+      note: "",
+      media: null,
+    }),
   },
   (t) => [
     check(
