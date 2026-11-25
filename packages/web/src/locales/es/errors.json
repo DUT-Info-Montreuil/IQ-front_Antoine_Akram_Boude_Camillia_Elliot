@@ -75,5 +75,18 @@
     "notFound": "Archivo no encontrado",
     "tooLarge": "El archivo es demasiado grande",
     "uploadFailed": "No se pudo subir el archivo"
+  },
+  "cours": {
+    "fichierManquant": "Choose a PDF file",
+    "pasUnPdf": "This file is not a PDF",
+    "tropVolumineux": "The file is larger than {{max}} MB",
+    "pdfIllisible": "Unreadable PDF: it is corrupted or password protected",
+    "titreVide": "The title cannot be empty",
+    "titreTropLong": "The title is too long",
+    "codeRessourceTropLong": "The module code is too long",
+    "importEchoue": "The course import failed, try again",
+    "introuvable": "Course not found",
+    "accesRefuse": "You do not have access to this course",
+    "affichageImpossible": "Unable to display this PDF"
   }
 }
