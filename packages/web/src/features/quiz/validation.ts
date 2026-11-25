@@ -42,7 +42,7 @@ export const NOTE_MAX = 300
 export const optionsParDefaut = (): OptionsQuestion => ({
   delaiLecture: DELAI_LECTURE_MIN,
   penalite: 0,
-  modeScore: "STRICT",
+  modeScore: "EQUILIBRE",
   categorie: "",
   note: "",
   media: null,
