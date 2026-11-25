@@ -160,7 +160,8 @@ Codes de retour : 400 saisie, 401, 403 droit, 404, 409 conflit d'état, 410 trop
 | `POST /api/cours/{id}/quiz` | Édition | `QuizSaisie` → 201 `Quiz` ; 400 saisie ou page inexistante |
 | `GET` / `PUT` / `DELETE /api/quiz/{id}` | Lecture / Édition | 409 si une question est ouverte ; `DELETE ?forcer=true` supprime aussi les réponses (409 sinon) |
 | `POST /api/quiz/expressions/test` | Enseignant | `{motif, exemples[]}` |
-| `POST /api/seances` | Lecture du cours | `{idCours}` → `{idSeance, codeAcces, urlAcces}` |
+| `POST /api/seances` | Lecture du cours | `{idCours}` → `{idSeance, codeAcces, urlAcces}` ; 409 cours sans PDF |
+| `POST /api/seances/{id}/fin` | Animateur | → `{idSeance, statut, dateDebut, dateFin, nbParticipants}` ; 409 déjà terminée |
 | `GET /api/acces/{code}` | Public | `{idSeance, titreCours}` |
 | `POST /api/seances/{id}/participants` | Étudiant | `{pseudo}` → `{participation, ticket}` |
 
@@ -171,7 +172,7 @@ Objets principaux :
 - `QuestionSaisie` : type, enonce, dureeSecondes, pointsMax, propositions[], paires[], expressions[], options.
 - `Quiz` : `QuizSaisie` + id, idCours.
 
-Événements temps réel ajoutés par IQ : `manager:openQuiz`, `manager:endQuiz`, `player:matchedPairs`, `player:freeAnswer`, statut `SHOW_STATS`. Les autres reprennent les noms Razzia (`manager:advance`, `player:login`, `player:selectedAnswer`, `game:status`…).
+Événements temps réel ajoutés par IQ : `manager:openQuiz {idSeance, idQuiz}` (réponse `manager:quizOpened {idSeance, idQuiz, gameId, inviteCode, questionsIgnorees}`, refus en `game:errorMessage`), `manager:endQuiz`, `player:matchedPairs`, `player:freeAnswer`, statut `SHOW_STATS`. Les autres reprennent les noms Razzia (`manager:advance`, `player:login`, `player:selectedAnswer`, `game:status`…).
 
 ## 8. État d'avancement du front (sprint 1)
 
@@ -192,6 +193,7 @@ Modules front IQ :
 - Base PostgreSQL et Drizzle (SCRUM-67), décrite dans `BD.md`.
 - SCRUM-49 « Importer un support PDF » : `GET/POST /api/cours`, `GET /api/cours/{id}`, `GET …/versions/{n}/fichier` (CoursService, PdfService).
 - SCRUM-56 « Insérer un quiz dans le cours » : `POST /api/cours/{id}/quiz`, `GET/PUT/DELETE /api/quiz/{id}` (QuizService). Le quiz est rangé à son rang après sa page, les autres quiz de la page sont décalés.
+- SCRUM-64 « Ouvrir un quiz » (CU 2.1, figure 12) : `POST /api/seances`, `POST /api/seances/{id}/fin` et l'événement `manager:openQuiz`. Le serveur lit le quiz en base, le convertit en QCM Razzia et crée la partie **avec le code de la séance**, commun à tous ses quiz. Contrôles : animateur, séance ouverte, aucune question ouverte, quiz du cours. Les joueurs des quiz précédents de la séance sont inscrits d'office (`game:successJoin`). Remplace `features/seance/moteur.ts` côté front. Hors périmètre : réponses et lancements en base (SCRUM-28), `GET /api/acces/{code}` et participants LDAP (CU 2.2), reconstruction après redémarrage, RELIER/LIBRE en séance.
 - Limites communes : un seul enseignant provisoire (`enseignant`) en attendant le LDAP, routes réservées au gestionnaire Razzia, PDF rangés dans `config/pdf/`.
 
 Le front fonctionne encore par défaut sur des **mocks** qui respectent les contrats ci-dessus, et `VITE_API_MOCK=false` bascule sur les vraies routes. Le temps réel passe par le moteur Razzia existant : `moteur.ts` copie le quiz IQ au format QCM Razzia et crée la partie, en attendant `manager:openQuiz`. Le moteur ne joue que les QCM : en séance, les questions « relier » et « libre » sont ignorées avec un message.

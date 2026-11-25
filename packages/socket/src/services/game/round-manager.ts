@@ -113,6 +113,11 @@ export class RoundManager {
     return this.started
   }
 
+  // IQ : entre l'affichage de l'énoncé et la révélation de la réponse.
+  isQuestionOpen(): boolean {
+    return this.started && this.isAskingQuestion()
+  }
+
   private get question(): Question {
     return this.opts.quizz.questions[this.currentQuestion]
   }
