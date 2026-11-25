@@ -94,6 +94,14 @@ export interface ServerToClientEvents {
     timedOut: boolean
   }) => void
   [EVENTS.MANAGER.LOCK_UPDATED]: (_locked: boolean) => void
+  [EVENTS.MANAGER.QUIZ_OPENED]: (_data: {
+    idSeance: number
+    idQuiz: number
+    gameId: string
+    inviteCode: string
+    /** Questions RELIER et LIBRE que le moteur ne joue pas encore. */
+    questionsIgnorees: number
+  }) => void
 }
 
 type ClientEventValidators = typeof clientEventValidators

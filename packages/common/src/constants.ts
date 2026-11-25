@@ -35,6 +35,9 @@ export const EVENTS = {
     AUTO_ADVANCE: "manager:autoAdvance",
     SET_LOCK: "manager:setLock",
     LOCK_UPDATED: "manager:lockUpdated",
+    // IQ : ouverture d'un quiz dans une séance (CU 2.1, figure 12).
+    OPEN_QUIZ: "manager:openQuiz",
+    QUIZ_OPENED: "manager:quizOpened",
   },
 } as const
 
