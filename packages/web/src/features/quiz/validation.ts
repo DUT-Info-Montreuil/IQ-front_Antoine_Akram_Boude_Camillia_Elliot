@@ -433,7 +433,13 @@ export const changerType = (
 /** À l'enregistrement, seule la liste du type choisi est envoyée. */
 export const nettoyerQuestion = (question: QuestionSaisie): QuestionSaisie => ({
   ...question,
-  propositions: question.type === "QCM" ? question.propositions : [],
+  propositions:
+      question.type === "QCM"
+          ? question.propositions.map((p) => ({
+            ...p,
+            points: p.estCorrecte ? p.points : 0,
+          }))
+          : [],
   paires: question.type === "RELIER" ? question.paires : [],
   expressions: question.type === "LIBRE" ? question.expressions : [],
 })
