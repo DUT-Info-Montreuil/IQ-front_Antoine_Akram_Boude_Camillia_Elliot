@@ -7,9 +7,32 @@ services:
       - ./config:/app/config
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgres://iq:iq@postgres:5432/iq
+    depends_on:
+      postgres:
+        condition: service_healthy
     # Or set them inline instead of using an .env file:
     # environment:
     #   MANAGER_PASSWORD: "change-me"
     #   JWT_SECRET: "" # optional, 32+ characters
     #   PUID: 1000 # optional, user owning ./config
     #   PGID: 1000 # optional, group owning ./config
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: iq
+      POSTGRES_PASSWORD: iq # à changer en production
+      POSTGRES_DB: iq
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iq -d iq"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
