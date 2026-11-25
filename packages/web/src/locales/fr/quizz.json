@@ -9,6 +9,7 @@
   },
   "noQuestionYet": "Aucune question pour l'instant",
   "question": {
+    "answerPoints": "Points pour {{label}}",
     "addMediaHint": "Ajoutez une image, une vidéo ou un audio à votre question",
     "config": {
       "answerTime": "Temps de réponse",
@@ -70,8 +71,8 @@
   },
   "questionHasErrors": "Cette question contient des erreurs",
   "questionType": {
-    "single": "Choix unique",
-    "multi": "Choix multiple",
+    "single": "QCM",
+    "multi": "QCM",
     "estimation": "Estimation"
   },
   "quizzSaved": "Quizz enregistré avec succès",

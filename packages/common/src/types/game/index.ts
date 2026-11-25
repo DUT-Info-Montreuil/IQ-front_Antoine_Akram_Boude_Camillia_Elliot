@@ -18,7 +18,7 @@ export interface MultiQuestionOptions {
 }
 
 export type EstimationInputMode =
-  (typeof ESTIMATION_INPUT_MODES)[keyof typeof ESTIMATION_INPUT_MODES]
+    (typeof ESTIMATION_INPUT_MODES)[keyof typeof ESTIMATION_INPUT_MODES]
 
 export interface EstimationQuestionOptions {
   inputMode: EstimationInputMode
@@ -46,8 +46,8 @@ export interface Answer {
 }
 
 export type QuestionMediaType =
-  | (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
-  | undefined
+    | (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
+    | undefined
 
 export interface QuestionMedia {
   type?: QuestionMediaType
@@ -55,7 +55,7 @@ export interface QuestionMedia {
 }
 
 export type UploadedMediaType =
-  (typeof ACCEPTED_MEDIA_TYPES)[keyof typeof ACCEPTED_MEDIA_TYPES]["type"]
+    (typeof ACCEPTED_MEDIA_TYPES)[keyof typeof ACCEPTED_MEDIA_TYPES]["type"]
 
 export interface UploadedMedia {
   name: string
@@ -70,6 +70,8 @@ export interface Question {
   note?: string
   media?: QuestionMedia
   answers: string[]
+  /** Points awarded for each answer option (same index as answers). */
+  answerPoints?: number[]
   solutions?: number[]
   cooldown: number
   time: number
