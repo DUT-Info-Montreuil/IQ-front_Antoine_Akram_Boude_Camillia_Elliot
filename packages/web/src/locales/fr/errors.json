@@ -1,4 +1,9 @@
 {
+  "seance": {
+    "questionOuverte": "Une question de ce quiz est ouverte en séance : réessayez à la fin de la question",
+    "quizDejaJoue": "Ce quiz a déjà été joué en séance : ses questions ne peuvent plus être modifiées",
+    "reponsesExistantes": "Ce quiz a déjà reçu des réponses : confirmez pour les supprimer avec lui"
+  },
   "api": {
     "notFound": "La ressource demandée n'existe pas",
     "serverError": "Le serveur a rencontré une erreur, réessayez"
@@ -88,5 +93,38 @@
     "introuvable": "Cours introuvable",
     "accesRefuse": "Vous n'avez pas accès à ce cours",
     "affichageImpossible": "Impossible d'afficher ce PDF"
+  },
+  "quiz": {
+    "titreVide": "Donnez un titre au quiz",
+    "titreTropLong": "Le titre du quiz est trop long",
+    "aucuneQuestion": "Un quiz compte au moins une question",
+    "enonceVide": "L'énoncé ne peut pas être vide",
+    "dureeHorsLimites": "La durée doit être comprise entre {{min}} et {{max}} secondes",
+    "pointsMaxInvalides": "Les points maximum doivent être un entier d'au moins 1",
+    "tropPeuPropositions": "Une question compte au moins 2 propositions",
+    "tropDePropositions": "Une question compte au plus 4 propositions",
+    "propositionVide": "Une proposition ne peut pas être vide",
+    "aucuneBonneReponse": "Cochez au moins une bonne réponse",
+    "bonneReponseSansPoints": "Une bonne réponse doit rapporter au moins 1 point",
+    "pointsEntiers": "Les points doivent être un nombre entier",
+    "pointsNegatifs": "Les points ne peuvent pas être négatifs",
+    "pointsSuperieursMax": "Les points dépassent le maximum de la question",
+    "introuvable": "Quiz introuvable",
+    "positionInvalide": "Cette page n'existe pas dans le cours",
+    "invalide": "Le quiz contient des erreurs de saisie",
+    "enregistrementEchoue": "L'enregistrement du quiz a échoué, réessayez",
+    "ouvertureEchouee": "Impossible d'ouvrir le quiz, réessayez",
+    "tropPeuPaires": "Une question compte au moins 2 paires",
+    "tropDePaires": "Une question compte au plus 8 paires",
+    "paireIncomplete": "Complétez les deux éléments de la paire",
+    "paireEnDouble": "Cet élément apparaît déjà dans une autre paire",
+    "tropDExpressions": "Une question compte au plus 10 expressions",
+    "expressionVide": "L'expression ne peut pas être vide",
+    "expressionInvalide": "Expression régulière invalide",
+    "delaiHorsLimites": "Le délai de lecture doit être compris entre {{delaiMin}} et {{delaiMax}} secondes",
+    "categorieTropLongue": "La catégorie fait au plus {{categorieMax}} caractères",
+    "noteTropLongue": "La note fait au plus {{noteMax}} caractères",
+    "mediaInvalide": "Adresse de média invalide : importez un fichier ou collez une adresse https://",
+    "aucuneQuestionJouable": "Ce quiz ne contient pas de QCM : le moteur de séance ne sait pas encore jouer les autres types"
   }
 }

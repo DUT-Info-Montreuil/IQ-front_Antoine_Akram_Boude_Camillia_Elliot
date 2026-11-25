@@ -4,6 +4,7 @@ type DomainErrorStatus =
   | StatusCodes.BAD_REQUEST
   | StatusCodes.FORBIDDEN
   | StatusCodes.NOT_FOUND
+  | StatusCodes.CONFLICT
   | StatusCodes.REQUEST_TOO_LONG
   | StatusCodes.UNSUPPORTED_MEDIA_TYPE
   | StatusCodes.UNPROCESSABLE_ENTITY
@@ -28,6 +29,9 @@ export const invalidInput = (key: string) =>
 
 export const forbidden = (key: string) =>
   new DomainError(key, StatusCodes.FORBIDDEN)
+
+export const conflict = (key: string) =>
+  new DomainError(key, StatusCodes.CONFLICT)
 
 export const tooLarge = (key: string) =>
   new DomainError(key, StatusCodes.REQUEST_TOO_LONG)

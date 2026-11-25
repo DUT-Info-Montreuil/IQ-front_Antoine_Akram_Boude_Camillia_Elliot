@@ -40,8 +40,8 @@ partagée.
 | `cours` | **id_cours**, titre, code_ressource, date_creation, date_modification, id_proprietaire → utilisateur |
 | `partage_cours` | **id_cours** → cours, **id_utilisateur** → utilisateur, droit, date_partage |
 | `version_pdf` | **id_version**, id_cours → cours, numero, chemin_fichier, nb_pages, taille_octets, date_import |
-| `quiz` | **id_quiz**, id_cours → cours, titre, mode_affichage, afficher_leaderboard, sert_notation, statut_placement, apres_page, rang, ordre_mise_de_cote |
-| `question` | **id_question**, id_quiz → quiz, ordre, type, enonce, duree_secondes, points_max |
+| `quiz` | **id_quiz**, id_cours → cours, titre, mode_affichage, afficher_leaderboard, sert_notation, statut_placement, apres_page, rang, ordre_mise_de_cote, options_partie (jsonb, migration 0001) |
+| `question` | **id_question**, id_quiz → quiz, ordre, type, enonce, duree_secondes, points_max, options (jsonb, migration 0001) |
 | `proposition` | **id_proposition**, id_question → question, ordre, libelle, est_correcte, points |
 | `paire` | **id_paire**, id_question → question, ordre, element_gauche, element_droit |
 | `expression_correction` | **id_expression**, id_question → question, ordre, motif, points |
@@ -62,6 +62,32 @@ partagée.
 
 `reponse.contenu` : QCM → tableau d'`id_proposition` ; RELIER → couples d'`id_paire` ;
 LIBRE → texte saisi.
+
+## Migrations
+
+| Fichier | Contenu |
+|---|---|
+| `0000_init.sql` | Les 18 tables du MLD, enums, contraintes et index |
+| `0001_options_quiz.sql` | Ajoute `question.options` et `quiz.options_partie` (SCRUM-12) |
+
+La migration 0001 ajoute deux colonnes `jsonb NOT NULL` qui ne sont pas dans le MLD du dossier. Elles
+stockent les réglages du moteur Razzia que l'éditeur E4 envoie avec `QuizSaisie` (ajouts au contrat
+proposés par le front) :
+
+| Colonne | Contenu | Valeur par défaut |
+|---|---|---|
+| `question.options` | `delaiLecture` (3 à 15 s), `penalite` (0 à points_max), `modeScore` (STRICT, EQUILIBRE, INDULGENT), `categorie` (40 caractères), `note` (300 caractères), `media` (`{type: IMAGE, VIDEO ou AUDIO, url}` ou null) | `{"delaiLecture":3,"penalite":0,"modeScore":"STRICT","categorie":"","note":"","media":null}` |
+| `quiz.options_partie` | `pseudosGeneres`, `reponsesSeulement` (booléens) | `{"pseudosGeneres":false,"reponsesSeulement":false}` |
+
+Ces réglages ne servent qu'au moteur de partie et ne sont jamais filtrés en SQL : une colonne jsonb
+évite six colonnes et un enum de plus. Leurs règles sont vérifiées avant l'écriture par
+`quizSaisieSchema` ([`packages/common/src/validators/quiz.ts`](packages/common/src/validators/quiz.ts)).
+
+Appliquer la migration sur une base existante :
+
+```bash
+corepack pnpm --filter socket db:migrate
+```
 
 ## Domaines de valeurs (enums)
 
@@ -92,8 +118,8 @@ LIBRE → texte saisi.
 - **Suppressions** :
   - supprimer un quiz supprime en cascade ses questions, propositions, paires et expressions ;
   - `lancement.id_question` est en `RESTRICT` : un quiz déjà joué en séance ne peut pas être
-    supprimé. La « confirmation explicite » du dossier est à gérer par le service, qui supprimera
-    d'abord les lancements et les réponses ;
+    supprimé directement. Avec la confirmation explicite (`DELETE /api/quiz/{id}?forcer=true`),
+    QuizService supprime d'abord ses corrections, réponses et lancements, dans la même transaction ;
   - les tables d'association (`partage_cours`, `leaderboard_quiz`) et `correction` suivent leur parent ;
   - supprimer une séance met `journal_anonymisation.id_seance` à NULL (le journal est conservé).
 - **Index** : `reponse(id_lancement)`, `reponse(id_participation)`, `lancement(id_seance)`,
@@ -103,5 +129,8 @@ LIBRE → texte saisi.
 
 - `points_reponse ≤ points_max` de la question : cette règle porte sur deux tables, un `CHECK` ne
   peut donc pas l'exprimer. Elle est à vérifier dans le service de réponse (ou par un trigger si besoin).
-- L'application ne se connecte pas encore à la base et n'exécute pas les migrations au démarrage
-  (prévu par le dossier §2.6). Ce sera fait avec le premier service qui lit ou écrit en base.
+- L'application n'exécute pas les migrations au démarrage (prévu par le dossier §2.6) : lancer
+  `db:migrate` après chaque mise à jour du dépôt.
+- Le rang des quiz placés après une même page est recalculé par QuizService à chaque création,
+  modification ou suppression. Il n'y a pas de contrainte d'unicité sur `(id_cours, apres_page, rang)`,
+  pour pouvoir décaler les rangs dans une transaction.

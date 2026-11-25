@@ -6,6 +6,7 @@ import {
   importCoursValidator,
   versionParamsValidator,
 } from "@razzia/common/validators/cours"
+import { quizSaisieSchema } from "@razzia/common/validators/quiz"
 import { apiFactory } from "@razzia/socket/api/factory"
 import { requireManager } from "@razzia/socket/api/middleware"
 import { i18nHook } from "@razzia/socket/api/validation"
@@ -17,6 +18,7 @@ import {
   obtenirCours,
   utilisateurCourant,
 } from "@razzia/socket/services/cours"
+import { creerQuiz } from "@razzia/socket/services/quiz"
 
 const MULTIPART_OVERHEAD = 64 * 1024
 
@@ -40,6 +42,20 @@ const routes = apiFactory
     async (c) =>
       c.json(
         await importerCours(c.req.valid("form"), await utilisateurCourant()),
+        StatusCodes.CREATED,
+      ),
+  )
+  .post(
+    "/:idCours/quiz",
+    zValidator("param", coursParamsValidator, i18nHook),
+    zValidator("json", quizSaisieSchema, i18nHook),
+    async (c) =>
+      c.json(
+        await creerQuiz(
+          c.req.valid("param").idCours,
+          await utilisateurCourant(),
+          c.req.valid("json"),
+        ),
         StatusCodes.CREATED,
       ),
   )
