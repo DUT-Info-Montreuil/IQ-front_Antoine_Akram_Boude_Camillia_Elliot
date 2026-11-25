@@ -8,6 +8,11 @@ export const Route = createFileRoute("/manager/quizz")({
       // oxlint-disable-next-line typescript/only-throw-error
       throw redirect({ to: "/manager" })
     }
+
+    // IQ : les quiz se créent et se modifient dans un cours (écran E4,
+    // /manager/cours/quiz/$coursId). L'éditeur Razzia d'origine n'est plus exposé.
+    // oxlint-disable-next-line typescript/only-throw-error
+    throw redirect({ to: "/manager/cours" })
   },
   component: RouteComponent,
 })
