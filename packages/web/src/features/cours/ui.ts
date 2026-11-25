@@ -4,6 +4,7 @@ const base =
   "inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-[filter,transform] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iq-mousse"
 
 export const bouton = {
+  base,
   principal: `${base} bg-iq-olive px-5 py-3 text-white shadow-[0_4px_0_var(--color-iq-olive-fonce)] hover:brightness-110`,
   sombre: `${base} bg-iq-foret px-4 py-3 text-white hover:brightness-125`,
   contour: `${base} border-2 border-iq-bordure bg-white px-4 py-3 text-iq-texte hover:bg-iq-champ`,
