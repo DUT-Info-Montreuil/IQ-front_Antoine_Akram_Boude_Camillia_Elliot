@@ -22,10 +22,12 @@
     "pg": "^8.23.1",
     "socket.io": "catalog:",
     "typescript": "catalog:",
+    "unpdf": "^2.2.1",
     "uuid": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
     "@types/node": "catalog:",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",

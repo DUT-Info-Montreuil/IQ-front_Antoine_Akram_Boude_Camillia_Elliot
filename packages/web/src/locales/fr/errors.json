@@ -75,5 +75,18 @@
     "notFound": "Média introuvable",
     "tooLarge": "Le fichier est trop volumineux",
     "uploadFailed": "Échec de l'import du fichier"
+  },
+  "cours": {
+    "fichierManquant": "Choisissez un fichier PDF",
+    "pasUnPdf": "Ce fichier n'est pas un PDF",
+    "tropVolumineux": "Le fichier dépasse {{max}} Mo",
+    "pdfIllisible": "PDF illisible : il est corrompu ou protégé par un mot de passe",
+    "titreVide": "Le titre ne peut pas être vide",
+    "titreTropLong": "Le titre est trop long",
+    "codeRessourceTropLong": "Le code de la ressource est trop long",
+    "importEchoue": "L'import du cours a échoué, réessayez",
+    "introuvable": "Cours introuvable",
+    "accesRefuse": "Vous n'avez pas accès à ce cours",
+    "affichageImpossible": "Impossible d'afficher ce PDF"
   }
 }
