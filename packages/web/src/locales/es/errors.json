@@ -2,7 +2,13 @@
   "seance": {
     "questionOuverte": "A question of this quiz is open in a session: try again when it ends",
     "quizDejaJoue": "This quiz has already been played: its questions can no longer be changed",
-    "reponsesExistantes": "This quiz already has answers: confirm to delete them with it"
+    "reponsesExistantes": "This quiz already has answers: confirm to delete them with it",
+    "coursSansVersion": "This course has no PDF to present yet",
+    "codeIndisponible": "No free session code right now, try again",
+    "introuvable": "Session not found: reopen the presentation",
+    "terminee": "This session has ended",
+    "nonAutorise": "Only the session host can open its quizzes",
+    "ouvertureImpossible": "Unable to open the quiz, try again"
   },
   "api": {
     "notFound": "El recurso solicitado no existe",

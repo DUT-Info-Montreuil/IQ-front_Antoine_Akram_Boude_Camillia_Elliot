@@ -6,6 +6,7 @@ import { media } from "@razzia/socket/api/routes/media"
 import { quizRoutes } from "@razzia/socket/api/routes/quiz"
 import { quizz } from "@razzia/socket/api/routes/quizz"
 import { results } from "@razzia/socket/api/routes/results"
+import { seancesRoutes } from "@razzia/socket/api/routes/seances"
 
 const routes = new Hono()
   .get("/health", (c) => c.json({ status: "ok" }))
@@ -16,6 +17,7 @@ const routes = new Hono()
   .route("/media", media)
   .route("/cours", coursRoutes)
   .route("/quiz", quizRoutes)
+  .route("/seances", seancesRoutes)
 
 export const api = routes
 

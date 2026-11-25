@@ -2,7 +2,13 @@
   "seance": {
     "questionOuverte": "Une question de ce quiz est ouverte en séance : réessayez à la fin de la question",
     "quizDejaJoue": "Ce quiz a déjà été joué en séance : ses questions ne peuvent plus être modifiées",
-    "reponsesExistantes": "Ce quiz a déjà reçu des réponses : confirmez pour les supprimer avec lui"
+    "reponsesExistantes": "Ce quiz a déjà reçu des réponses : confirmez pour les supprimer avec lui",
+    "coursSansVersion": "Ce cours n’a pas encore de PDF à présenter",
+    "codeIndisponible": "Aucun code de séance libre pour le moment, réessayez",
+    "introuvable": "Séance introuvable : rouvrez la présentation",
+    "terminee": "Cette séance est terminée",
+    "nonAutorise": "Seul l’animateur de la séance peut ouvrir ses quiz",
+    "ouvertureImpossible": "Impossible d’ouvrir le quiz, réessayez"
   },
   "api": {
     "notFound": "La ressource demandée n'existe pas",
