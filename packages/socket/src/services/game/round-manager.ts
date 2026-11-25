@@ -323,6 +323,11 @@ export class RoundManager {
     this.opts.broadcast(STATUS.SELECT_ANSWER, {
       question: this.question.question,
       answers: this.question.answers,
+
+      correctAnswersCount: Math.max(
+          this.question.solutions?.length ?? 1,
+          1,
+      ),
       media: this.question.media,
       time: this.question.time,
       totalPlayer: this.opts.players.count(),
