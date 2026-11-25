@@ -13,6 +13,7 @@ import {
   fichierCoursQuery,
 } from "@razzia/web/features/cours/queries"
 import { bouton } from "@razzia/web/features/cours/ui"
+import { formaterDuree } from "@razzia/web/features/quiz/validation"
 import { ApiError } from "@razzia/web/lib/api"
 
 const Statistique = ({
@@ -45,10 +46,26 @@ const CoursEditeurPage = () => {
   const version = cours.data?.versions.find(
     (v) => v.numero === cours.data.versionCourante,
   )
-  const nbQuiz = cours.data?.deroule.filter((e) => e.type === "QUIZ").length
+  const quizDuCours = cours.data?.deroule.filter((e) => e.type === "QUIZ")
+  const nbQuestions = quizDuCours?.reduce((n, e) => n + (e.nbQuestions ?? 0), 0)
+  const dureeQuiz = quizDuCours?.reduce((n, e) => n + (e.dureeSecondes ?? 0), 0)
   const nbClassements = cours.data?.deroule.filter(
     (e) => e.type === "PAGE_CLASSEMENT",
   ).length
+
+  const insererQuiz = (apresPage?: number) =>
+    navigate({
+      to: "/manager/cours/quiz/$coursId",
+      params: { coursId },
+      search: { apresPage },
+    })
+
+  const modifierQuiz = (idQuiz: number) =>
+    navigate({
+      to: "/manager/cours/quiz/$coursId",
+      params: { coursId },
+      search: { quiz: idQuiz },
+    })
 
   const erreur = cours.error ?? fichier.error
   const aNotifieRef = useRef(false)
@@ -121,11 +138,16 @@ const CoursEditeurPage = () => {
             <h2 className="text-4xl font-black tracking-tight">
               {t("manager:cours.deroule")}
             </h2>
-            <p className="text-iq-gris">{t("manager:cours.derouleAide")}</p>
+            <p className="text-iq-gris">{t("manager:cours.derouleAideQuiz")}</p>
           </div>
 
-          {fichier.data ? (
-            <DerouleCours fichier={fichier.data} />
+          {fichier.data && cours.data ? (
+            <DerouleCours
+              fichier={fichier.data}
+              deroule={cours.data.deroule}
+              onInserer={insererQuiz}
+              onOuvrirQuiz={modifierQuiz}
+            />
           ) : (
             <div className="flex flex-wrap gap-6">
               {Array.from({ length: 8 }, (_, index) => (
@@ -145,28 +167,30 @@ const CoursEditeurPage = () => {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <Statistique
-                valeur={nbQuiz ?? "–"}
+                valeur={quizDuCours?.length ?? "–"}
                 libelle={t("manager:cours.quiz")}
               />
               <Statistique
-                valeur={version?.nbPages ?? "–"}
-                libelle={t("manager:cours.pages")}
+                valeur={nbQuestions ?? "–"}
+                libelle={t("manager:cours.questions")}
+              />
+              <Statistique
+                valeur={
+                  dureeQuiz === undefined ? "–" : formaterDuree(dureeQuiz)
+                }
+                libelle={t("manager:cours.deQuizEnTout")}
               />
               <Statistique
                 valeur={nbClassements ?? "–"}
                 libelle={t("manager:cours.classement")}
-              />
-              <Statistique
-                valeur={cours.data?.versionCourante ?? "–"}
-                libelle={t("manager:cours.versionCourte")}
               />
             </div>
           </div>
 
           <button
             className={bouton.principal}
-            disabled
-            title={t("manager:cours.bientot")}
+            disabled={!cours.data}
+            onClick={() => insererQuiz()}
           >
             <Plus className="size-5" />
             {t("manager:cours.ajouterQuiz")}

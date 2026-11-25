@@ -3,24 +3,70 @@ import { Dialog } from "radix-ui"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { PDFDocumentProxy } from "@razzia/web/features/cours/pdf"
+import type { ElementDeroule } from "@razzia/web/features/cours/types"
 import Loader from "@razzia/web/components/Loader"
 import PdfPageCanvas from "@razzia/web/features/cours/components/PdfPageCanvas"
 import { usePdfDocument } from "@razzia/web/features/cours/hooks/usePdfDocument"
+import { formaterDuree } from "@razzia/web/features/quiz/validation"
 
-/** Emplacement « + » entre deux pages, où l'on insérera un quiz (CU 1.3). */
-const EmplacementQuiz = ({ apresPage }: { apresPage: number }) => {
+/** Emplacement « + » entre deux pages pour insérer un quiz (CU 1.3). */
+const EmplacementQuiz = ({
+  apresPage,
+  onInserer,
+}: {
+  apresPage: number
+  onInserer: (apresPage: number) => void
+}) => {
   const { t } = useTranslation()
 
   return (
     <button
       type="button"
-      disabled
-      className="flex size-10 shrink-0 items-center justify-center self-center rounded-full border-2 border-dashed border-iq-sauge bg-iq-champ text-iq-olive disabled:cursor-not-allowed"
-      title={t("manager:cours.insererQuizBientot", { page: apresPage })}
-      aria-label={t("manager:cours.insererQuizBientot", { page: apresPage })}
+      className="flex size-10 shrink-0 items-center justify-center self-center rounded-full border-2 border-dashed border-iq-sauge bg-iq-champ text-iq-olive transition hover:scale-110 hover:border-iq-mousse hover:bg-iq-sauge/40"
+      onClick={() => onInserer(apresPage)}
+      title={t("manager:cours.insererQuiz", { page: apresPage })}
+      aria-label={t("manager:cours.insererQuiz", { page: apresPage })}
     >
       <Plus className="size-5" />
     </button>
+  )
+}
+
+/** Carte d'un quiz placé dans le déroulé (maquette E3). */
+const CarteQuiz = ({
+  element,
+  numero,
+  hauteur,
+  onOuvrir,
+}: {
+  element: ElementDeroule
+  numero: number
+  hauteur: string
+  onOuvrir: (idQuiz: number) => void
+}) => {
+  const { t } = useTranslation()
+
+  return (
+    <figure className="flex w-36 flex-col gap-1.5">
+      <button
+        type="button"
+        className="flex flex-col justify-between rounded-xl bg-iq-olive p-3 text-left text-white shadow-[0_4px_0_var(--color-iq-olive-fonce)] transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-iq-mousse focus-visible:outline-none"
+        style={{ minHeight: hauteur }}
+        onClick={() => onOuvrir(element.id)}
+        title={t("manager:cours.modifierQuiz", { titre: element.titre })}
+      >
+        <span className="text-xl font-extrabold">{t("manager:quiz.quiz")}</span>
+        <span className="text-xs leading-tight font-bold">
+          {t("manager:cours.resumeQuiz", {
+            nb: element.nbQuestions ?? 0,
+            duree: formaterDuree(element.dureeSecondes ?? 0),
+          })}
+        </span>
+      </button>
+      <figcaption className="line-clamp-2 leading-tight font-bold text-iq-olive">
+        {t("manager:quiz.numero", { numero })} · {element.titre}
+      </figcaption>
+    </figure>
   )
 }
 
@@ -119,10 +165,16 @@ const ApercuPage = ({ document, ratio, numero, onChange }: ApercuProps) => {
 
 interface Props {
   fichier: Blob | undefined
+  deroule: ElementDeroule[]
+  onInserer: (apresPage: number) => void
+  onOuvrirQuiz: (idQuiz: number) => void
 }
 
-/** Déroulé du cours (E3) : les pages du PDF, rendues par pdf.js. */
-const DerouleCours = ({ fichier }: Props) => {
+/**
+ * Déroulé du cours (E3) : les pages du PDF rendues par pdf.js, les quiz placés
+ * après leur page et un « + » après chaque élément pour insérer un quiz.
+ */
+const DerouleCours = ({ fichier, deroule, onInserer, onOuvrirQuiz }: Props) => {
   const pdf = usePdfDocument(fichier)
   const [apercu, setApercu] = useState<number | null>(null)
   const { t } = useTranslation()
@@ -145,6 +197,16 @@ const DerouleCours = ({ fichier }: Props) => {
   }
 
   const { document, ratio } = pdf
+  const hauteur = `${9 * ratio}rem`
+  const quiz = deroule
+    .filter((e) => e.type === "QUIZ")
+    .sort((a, b) => (a.apresPage ?? 0) - (b.apresPage ?? 0) || a.rang - b.rang)
+
+  const emplacement = (apresPage: number) => (
+    <div className="flex items-center" style={{ height: hauteur }}>
+      <EmplacementQuiz apresPage={apresPage} onInserer={onInserer} />
+    </div>
+  )
 
   return (
     <>
@@ -153,30 +215,41 @@ const DerouleCours = ({ fichier }: Props) => {
           const numero = index + 1
 
           return (
-            <li key={numero} className="flex items-start gap-3">
-              <figure className="flex w-36 flex-col gap-1.5">
-                <button
-                  type="button"
-                  className="overflow-hidden rounded-xl shadow-[0_3px_10px_rgba(30,51,24,0.1)] ring-iq-mousse transition hover:-translate-y-0.5 hover:ring-2 focus-visible:ring-2 focus-visible:outline-none"
-                  onClick={() => setApercu(numero)}
-                  title={t("manager:cours.agrandir", { numero })}
-                >
-                  <PdfPageCanvas
-                    document={document}
-                    numero={numero}
-                    ratio={ratio}
-                  />
-                </button>
-                <figcaption className="text-iq-gris">
-                  {t("manager:cours.pageCourte", { numero })}
-                </figcaption>
-              </figure>
-              <div
-                className="flex items-center"
-                style={{ height: `${9 * ratio}rem` }}
-              >
-                <EmplacementQuiz apresPage={numero} />
+            <li key={numero} className="contents">
+              <div className="flex items-start gap-3">
+                <figure className="flex w-36 flex-col gap-1.5">
+                  <button
+                    type="button"
+                    className="overflow-hidden rounded-xl shadow-[0_3px_10px_rgba(30,51,24,0.1)] ring-iq-mousse transition hover:-translate-y-0.5 hover:ring-2 focus-visible:ring-2 focus-visible:outline-none"
+                    onClick={() => setApercu(numero)}
+                    title={t("manager:cours.agrandir", { numero })}
+                  >
+                    <PdfPageCanvas
+                      document={document}
+                      numero={numero}
+                      ratio={ratio}
+                    />
+                  </button>
+                  <figcaption className="text-iq-gris">
+                    {t("manager:cours.pageCourte", { numero })}
+                  </figcaption>
+                </figure>
+                {emplacement(numero)}
               </div>
+
+              {quiz
+                .filter((e) => e.apresPage === numero)
+                .map((element) => (
+                  <div key={element.id} className="flex items-start gap-3">
+                    <CarteQuiz
+                      element={element}
+                      numero={quiz.indexOf(element) + 1}
+                      hauteur={hauteur}
+                      onOuvrir={onOuvrirQuiz}
+                    />
+                    {emplacement(numero)}
+                  </div>
+                ))}
             </li>
           )
         })}

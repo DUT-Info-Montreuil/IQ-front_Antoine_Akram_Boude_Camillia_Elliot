@@ -129,7 +129,7 @@ const ManagerGamePage = () => {
         navigate({
           to: "/manager/cours/presenter/$coursId",
           params: { coursId: String(contexte.cours) },
-          search: { page: contexte.page },
+          search: { etape: contexte.etape },
         })
 
         return

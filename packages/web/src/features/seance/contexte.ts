@@ -11,6 +11,8 @@ import { z } from "zod"
 export const contexteSeanceSchema = z.object({
   cours: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional(),
+  /** Étape du déroulé où reprendre la présentation en quittant la salle. */
+  etape: z.coerce.number().int().positive().optional(),
   quiz: z.string().optional(),
 })
 

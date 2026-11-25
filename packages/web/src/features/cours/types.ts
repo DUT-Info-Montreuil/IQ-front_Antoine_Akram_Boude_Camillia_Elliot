@@ -18,6 +18,9 @@ export interface ElementDeroule {
   apresPage: number | null
   rang: number
   ordreMiseDeCote: number | null
+  /** Ajoutés pour les cartes de quiz de E3, à confirmer avec le back. */
+  nbQuestions?: number
+  dureeSecondes?: number
 }
 
 export interface CoursResume {

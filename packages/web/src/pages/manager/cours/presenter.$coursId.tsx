@@ -1,15 +1,20 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Maximize,
   Minimize,
   Play,
 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
+import type { ElementDeroule } from "@razzia/web/features/cours/types"
+import { STATUS } from "@razzia/common/types/game/status"
+import plume from "@razzia/web/assets/iq/plume.png"
 import AlertDialog from "@razzia/web/components/AlertDialog"
 import Loader from "@razzia/web/components/Loader"
 import PdfPageCanvas from "@razzia/web/features/cours/components/PdfPageCanvas"
@@ -19,21 +24,57 @@ import {
   fichierCoursQuery,
 } from "@razzia/web/features/cours/queries"
 import { bouton } from "@razzia/web/features/cours/ui"
-import ChoixQuizDialog from "@razzia/web/features/seance/components/ChoixQuizDialog"
+import { useManagerStore } from "@razzia/web/features/game/stores/manager"
+import { createStatus } from "@razzia/web/features/game/utils/createStatus"
+import { quizQuery } from "@razzia/web/features/quiz/queries"
+import { formaterDuree } from "@razzia/web/features/quiz/validation"
+import { ouvrirDansMoteur } from "@razzia/web/features/seance/moteur"
 import { useFullscreen } from "@razzia/web/hooks/useFullscreen"
+import { ApiError } from "@razzia/web/lib/api"
 
 const searchSchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
+  etape: z.coerce.number().int().positive().optional(),
 })
 
-/** Présentation du cours en salle (E5), page par page. */
+type Etape =
+  | { type: "page"; numero: number }
+  | { type: "quiz"; element: ElementDeroule; numero: number; page: number }
+
+/** Déroulé projeté : chaque page, suivie des quiz placés après elle. */
+const construireEtapes = (
+  nbPages: number,
+  deroule: ElementDeroule[],
+): Etape[] => {
+  const quiz = deroule
+    .filter((e) => e.type === "QUIZ")
+    .sort((a, b) => (a.apresPage ?? 0) - (b.apresPage ?? 0) || a.rang - b.rang)
+
+  return Array.from({ length: nbPages }, (_, index): Etape[] => {
+    const numero = index + 1
+
+    return [
+      { type: "page", numero },
+      ...quiz
+        .filter((e) => e.apresPage === numero)
+        .map((element): Etape => ({
+          type: "quiz",
+          element,
+          numero: quiz.indexOf(element) + 1,
+          page: numero,
+        })),
+    ]
+  }).flat()
+}
+
+/** Présentation du cours en salle (E5), page par page, quiz compris. */
 const PresentationPage = () => {
   const { coursId } = Route.useParams()
-  const { page: pageInitiale } = Route.useSearch()
+  const { etape: etapeDemandee } = Route.useSearch()
   const idCours = Number(coursId)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { updateManager } = useManagerStore()
   const { isFullscreen, toggle } = useFullscreen()
-  const [choixQuiz, setChoixQuiz] = useState(false)
   const { t } = useTranslation()
 
   const cours = useQuery(coursQuery(idCours))
@@ -42,43 +83,73 @@ const PresentationPage = () => {
     enabled: Boolean(cours.data),
   })
   const pdf = usePdfDocument(fichier.data)
-  const total = pdf.etat === "pret" ? pdf.document.numPages : 0
-  const page = Math.min(Math.max(pageInitiale ?? 1, 1), Math.max(total, 1))
+  const etapes =
+    pdf.etat === "pret" && cours.data
+      ? construireEtapes(pdf.document.numPages, cours.data.deroule)
+      : []
+  const total = etapes.length
+  const indice = Math.min(Math.max(etapeDemandee ?? 1, 1), Math.max(total, 1))
+  const etape = etapes.at(indice - 1)
+  const page = etape?.type === "quiz" ? etape.page : (etape?.numero ?? 1)
 
-  const allerA = useCallback(
-    (cible: number) => {
-      if (cible >= 1 && cible <= total) {
-        void navigate({
-          to: ".",
-          search: { page: cible },
-          replace: true,
+  const allerA = (cible: number) => {
+    if (cible >= 1 && cible <= total) {
+      void navigate({ to: ".", search: { etape: cible }, replace: true })
+    }
+  }
+
+  const ouverture = useMutation({
+    mutationFn: async (element: ElementDeroule) =>
+      ouvrirDansMoteur(await queryClient.query(quizQuery(element.id))),
+    onSuccess: ({ gameId, inviteCode, idMoteur, ignorees }) => {
+      if (ignorees > 0) {
+        toast(t("manager:seance.questionsIgnorees", { nb: ignorees }), {
+          icon: "ℹ️",
+          duration: 6000,
         })
       }
+
+      updateManager({
+        gameId,
+        inviteCode,
+        players: [],
+        status: createStatus(STATUS.SHOW_ROOM, {
+          text: "game:waitingForPlayers",
+          inviteCode,
+        }),
+      })
+      void navigate({
+        to: "/party/manager/$gameId",
+        params: { gameId },
+        search: { cours: idCours, page, etape: indice, quiz: idMoteur },
+      })
     },
-    [navigate, total],
-  )
+    onError: (error) =>
+      toast.error(
+        t(
+          error instanceof ApiError
+            ? error.key
+            : "errors:quiz.ouvertureEchouee",
+        ),
+      ),
+  })
 
   useEffect(() => {
     const clavier = (e: KeyboardEvent) => {
-      if (choixQuiz) {
-        return
-      }
+      const pas = ["ArrowRight", "PageDown", " "].includes(e.key) ? 1 : 0
+      const recul = ["ArrowLeft", "PageUp"].includes(e.key) ? -1 : 0
+      const cible = indice + pas + recul
 
-      if (["ArrowRight", "PageDown", " "].includes(e.key)) {
+      if (pas + recul !== 0 && cible >= 1 && cible <= total) {
         e.preventDefault()
-        allerA(page + 1)
-      }
-
-      if (["ArrowLeft", "PageUp"].includes(e.key)) {
-        e.preventDefault()
-        allerA(page - 1)
+        void navigate({ to: ".", search: { etape: cible }, replace: true })
       }
     }
 
     window.addEventListener("keydown", clavier)
 
     return () => window.removeEventListener("keydown", clavier)
-  }, [allerA, page, choixQuiz])
+  }, [navigate, indice, total])
 
   const terminer = () => {
     if (document.fullscreenElement) {
@@ -91,49 +162,92 @@ const PresentationPage = () => {
     })
   }
 
+  const contenu = () => {
+    if (pdf.etat === "erreur" || cours.isError) {
+      return (
+        <p className="font-semibold text-iq-saumon">
+          {t("errors:cours.affichageImpossible")}
+        </p>
+      )
+    }
+
+    if (pdf.etat !== "pret" || !etape) {
+      return <Loader className="size-12 text-iq-sauge" />
+    }
+
+    if (etape.type === "quiz") {
+      return (
+        <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
+          <div className="rounded-[2rem] bg-iq-foret-clair p-5">
+            <img src={plume} alt="" className="w-32" />
+          </div>
+          <p className="text-lg font-extrabold tracking-[0.15em] text-iq-citron uppercase">
+            {[
+              cours.data?.codeRessource,
+              t("manager:quiz.numero", { numero: etape.numero }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <h1 className="text-5xl leading-tight font-black lg:text-6xl">
+            {etape.element.titre}
+          </h1>
+          <p className="text-xl text-white/70">
+            {t("manager:cours.resumeQuiz", {
+              nb: etape.element.nbQuestions ?? 0,
+              duree: formaterDuree(etape.element.dureeSecondes ?? 0),
+            })}
+          </p>
+          <button
+            className={`${bouton.citron} px-8 py-4 text-xl`}
+            onClick={() => ouverture.mutate(etape.element)}
+            disabled={ouverture.isPending}
+          >
+            {ouverture.isPending ? (
+              <Loader className="size-6" />
+            ) : (
+              <Play className="size-5 fill-current" />
+            )}
+            {t("manager:seance.ouvrir")}
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        className="w-full"
+        style={{ maxWidth: `calc((100svh - 7.5rem) / ${pdf.ratio})` }}
+      >
+        <PdfPageCanvas
+          key={etape.numero}
+          document={pdf.document}
+          numero={etape.numero}
+          ratio={pdf.ratio}
+          immediat
+          className="rounded-lg shadow-2xl"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-svh flex-col bg-iq-foret text-iq-creme">
       <main className="relative flex min-h-0 flex-1 items-center justify-center p-6">
-        {pdf.etat === "pret" ? (
-          <div
-            className="w-full"
-            style={{
-              maxWidth: `calc((100svh - 7.5rem) / ${pdf.ratio})`,
-            }}
-          >
-            <PdfPageCanvas
-              key={page}
-              document={pdf.document}
-              numero={page}
-              ratio={pdf.ratio}
-              immediat
-              className="rounded-lg shadow-2xl"
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 text-white/70">
-            {pdf.etat === "erreur" || cours.isError ? (
-              <p className="font-semibold text-iq-saumon">
-                {t("errors:cours.affichageImpossible")}
-              </p>
-            ) : (
-              <Loader className="size-12 text-iq-sauge" />
-            )}
-          </div>
-        )}
+        {contenu()}
 
         <button
           className="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-black/20 p-3 text-white/70 hover:bg-black/40 hover:text-white disabled:invisible"
-          disabled={page <= 1}
-          onClick={() => allerA(page - 1)}
+          disabled={indice <= 1}
+          onClick={() => allerA(indice - 1)}
           title={t("common:previous")}
         >
           <ChevronLeft className="size-6" />
         </button>
         <button
           className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-black/20 p-3 text-white/70 hover:bg-black/40 hover:text-white disabled:invisible"
-          disabled={page >= total}
-          onClick={() => allerA(page + 1)}
+          disabled={indice >= total}
+          onClick={() => allerA(indice + 1)}
           title={t("common:next")}
         >
           <ChevronRight className="size-6" />
@@ -165,7 +279,9 @@ const PresentationPage = () => {
               </span>
             )}
             {total > 0 && (
-              <span>{t("manager:seance.pageDuDeroule", { page, total })}</span>
+              <span>
+                {t("manager:seance.etapeDuDeroule", { etape: indice, total })}
+              </span>
             )}
           </p>
 
@@ -185,22 +301,15 @@ const PresentationPage = () => {
             </button>
             <button
               className={bouton.citron}
-              onClick={() => setChoixQuiz(true)}
-              disabled={total === 0}
+              onClick={() => allerA(indice + 1)}
+              disabled={indice >= total}
             >
-              <Play className="size-4 fill-current" />
-              {t("manager:seance.ouvrirQuiz")}
+              {t("common:next")}
+              <ArrowRight className="size-5" />
             </button>
           </div>
         </div>
       </footer>
-
-      <ChoixQuizDialog
-        open={choixQuiz}
-        onOpenChange={setChoixQuiz}
-        idCours={idCours}
-        page={page}
-      />
     </div>
   )
 }
