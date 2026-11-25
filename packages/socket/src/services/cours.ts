@@ -19,6 +19,7 @@ import {
   utilisateur,
   versionPdf,
 } from "@razzia/socket/db/schema"
+import { avecPositions, lireOrdre } from "@razzia/socket/services/deroule"
 import { forbidden, notFound } from "@razzia/socket/services/errors"
 import {
   analyserPdf,
@@ -235,6 +236,8 @@ export const obtenirCours = async (idCours: number, idUtilisateur: number) => {
     misDeCote: sesQuiz
       .filter((ligne) => ligne.quiz.statutPlacement === "MIS_DE_COTE")
       .map(elementQuiz),
+    // SCRUM-17 : ordre global (pages et quiz) que l'éditeur et la présentation affichent.
+    ordre: avecPositions(await lireOrdre(getDb(), idCours)),
   }
 }
 

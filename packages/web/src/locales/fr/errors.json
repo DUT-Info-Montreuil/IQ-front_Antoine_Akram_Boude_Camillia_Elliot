@@ -1,4 +1,12 @@
 {
+  "deroule": {
+    "typeInconnu": "Élément du déroulé inconnu : seules les pages et les quiz peuvent être déplacés",
+    "pageInvalide": "Cette page n’existe pas dans le PDF du cours",
+    "pageManquante": "Chaque page du PDF doit apparaître une fois dans le déroulé",
+    "doublon": "Un élément apparaît deux fois dans le déroulé",
+    "quizInconnu": "Ce quiz n’appartient pas au cours",
+    "quizManquant": "Un quiz du cours manque dans le déroulé"
+  },
   "seance": {
     "questionOuverte": "Une question de ce quiz est ouverte en séance : réessayez à la fin de la question",
     "quizDejaJoue": "Ce quiz a déjà été joué en séance : ses questions ne peuvent plus être modifiées",
