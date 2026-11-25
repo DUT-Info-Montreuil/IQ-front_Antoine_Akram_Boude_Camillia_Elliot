@@ -3,6 +3,9 @@ import type { ManagerStatusDataMap } from "@razzia/common/types/game/status"
 
 export interface AnswerComponentProps {
   answers: string[]
+
+  correctAnswersCount?: number
+
   options?: QuestionOptions
   onSubmit: (_answerKeys: number[]) => void
   readOnly?: boolean

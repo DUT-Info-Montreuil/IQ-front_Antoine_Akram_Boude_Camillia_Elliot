@@ -25,17 +25,18 @@ interface Props {
 }
 
 const Answers = ({
-  data: {
-    question,
-    answers,
-    media,
-    time,
-    totalPlayer,
-    questionType,
-    options,
-    answersOnly,
-  },
-}: Props) => {
+                   data: {
+                     question,
+                     answers,
+                     correctAnswersCount,
+                     media,
+                     time,
+                     totalPlayer,
+                     questionType,
+                     options,
+                     answersOnly,
+                   },
+                 }: Props) => {
   const { socket } = useSocket()
   const { player, gameId } = usePlayerStore()
 
@@ -48,7 +49,7 @@ const Answers = ({
   const isPopupMedia = popupMedia.includes(media?.type)
   const showAnswersOnly = Boolean(player) && answersOnly
   const showMediaInPopup =
-    Boolean(player) && width < MOBILE_BREAKPOINT && isPopupMedia
+      Boolean(player) && width < MOBILE_BREAKPOINT && isPopupMedia
 
   const [sfxPop] = useSound(SFX.ANSWERS.SOUND, {
     volume: 0.1,
@@ -106,79 +107,80 @@ const Answers = ({
   const MediaIcon = media?.type === MEDIA_TYPES.VIDEO ? Video : Image
 
   return (
-    <div className="flex h-full flex-1 flex-col justify-between">
-      {showAnswersOnly ? (
-        <>
-          <QuestionDialog
-            question={question}
-            media={isPopupMedia ? media : undefined}
-            label={t("game:question.show")}
-            className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-md bg-white text-black hover:bg-accent"
-            showQuestion
-          >
-            <CircleQuestionMark className="size-6" />
-          </QuestionDialog>
+      <div className="flex h-full flex-1 flex-col justify-between">
+        {showAnswersOnly ? (
+            <>
+              <QuestionDialog
+                  question={question}
+                  media={isPopupMedia ? media : undefined}
+                  label={t("game:question.show")}
+                  className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-md bg-white text-black hover:bg-accent"
+                  showQuestion
+              >
+                <CircleQuestionMark className="size-6" />
+              </QuestionDialog>
 
-          {media?.type === MEDIA_TYPES.AUDIO && (
-            <div className="flex justify-center">
-              <QuestionMedia media={media} alt={question} />
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="mx-auto inline-flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">
-          <h2 className="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
-            {question}
-          </h2>
-
-          {showMediaInPopup ? (
-            <QuestionDialog
-              question={question}
-              media={media}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-bold text-black drop-shadow-md hover:bg-accent"
-            >
-              <MediaIcon className="size-5" />
-              {t(
-                media?.type === MEDIA_TYPES.VIDEO
-                  ? "game:media.showVideo"
-                  : "game:media.showImage",
+              {media?.type === MEDIA_TYPES.AUDIO && (
+                  <div className="flex justify-center">
+                    <QuestionMedia media={media} alt={question} />
+                  </div>
               )}
-            </QuestionDialog>
-          ) : (
-            <QuestionMedia media={media} alt={question} />
-          )}
-        </div>
-      )}
+            </>
+        ) : (
+            <div className="mx-auto inline-flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">
+              <h2 className="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
+                {question}
+              </h2>
 
-      <div className={clsx({ "flex flex-1 flex-col": showAnswersOnly })}>
-        <div className="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">
-          {time !== NO_TIME_LIMIT && (
-            <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
+              {showMediaInPopup ? (
+                  <QuestionDialog
+                      question={question}
+                      media={media}
+                      className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-bold text-black drop-shadow-md hover:bg-accent"
+                  >
+                    <MediaIcon className="size-5" />
+                    {t(
+                        media?.type === MEDIA_TYPES.VIDEO
+                            ? "game:media.showVideo"
+                            : "game:media.showImage",
+                    )}
+                  </QuestionDialog>
+              ) : (
+                  <QuestionMedia media={media} alt={question} />
+              )}
+            </div>
+        )}
+
+        <div className={clsx({ "flex flex-1 flex-col": showAnswersOnly })}>
+          <div className="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">
+            {time !== NO_TIME_LIMIT && (
+                <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
               <span className="translate-y-1 text-sm">
                 {t("game:hud.time")}
               </span>
-              <span>{cooldown}</span>
-            </div>
-          )}
-          <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
+                  <span>{cooldown}</span>
+                </div>
+            )}
+            <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
             <span className="translate-y-1 text-sm">
               {t("game:hud.answers")}
             </span>
-            <span>
+              <span>
               {totalAnswer}/{totalPlayer}
             </span>
+            </div>
           </div>
-        </div>
 
-        <AnswerComponent
-          answers={answers}
-          options={options}
-          onSubmit={handleSubmit}
-          readOnly={!player}
-          fill={showAnswersOnly}
-        />
+          <AnswerComponent
+              answers={answers}
+              correctAnswersCount={correctAnswersCount}
+              options={options}
+              onSubmit={handleSubmit}
+              readOnly={!player}
+              fill={showAnswersOnly}
+          />
+        </div>
       </div>
-    </div>
   )
 }
 
