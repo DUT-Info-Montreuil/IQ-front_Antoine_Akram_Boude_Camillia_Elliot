@@ -81,117 +81,143 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
 
   return (
       <details
-          className="group rounded-xl border border-iq-bordure"
+          className="group min-w-0 overflow-hidden rounded-xl border border-iq-bordure bg-white"
           open={ouvert || undefined}
       >
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-bold">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-iq-champ/50">
           <SlidersHorizontal className="size-4 shrink-0 text-iq-olive" />
-          <span>{t("manager:quiz.optionsAvancees")}</span>
-          <span className="hidden text-xs font-normal text-iq-gris sm:inline">
-          {t("manager:quiz.optionsAvanceesAide")}
+
+          <span className="min-w-0 flex-1 text-sm font-bold">
+          {t("manager:quiz.optionsAvancees")}
         </span>
-          <ChevronDown className="ml-auto size-4 shrink-0 transition group-open:rotate-180" />
+
+          <ChevronDown className="size-4 shrink-0 text-iq-foret transition-transform duration-200 group-open:rotate-180" />
         </summary>
 
-        <div className="flex flex-col gap-4 border-t border-iq-bordure p-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2">
-            <span className="text-sm font-bold">
+        <div className="flex min-w-0 flex-col gap-5 border-t border-iq-bordure p-4">
+          {/* Délai et pénalité */}
+          <div className="flex flex-col gap-4">
+            <label className="flex min-w-0 flex-col gap-2">
+            <span className="text-sm font-bold text-iq-foret">
               {t("manager:quiz.delaiLecture")}
             </span>
-              <span className="flex items-center gap-2">
-              <input
-                  type="number"
-                  min={DELAI_LECTURE_MIN}
-                  max={DELAI_LECTURE_MAX}
-                  className={clsx(
-                      champ,
-                      "w-24 text-sm font-semibold",
-                      erreur("options", "delaiLecture") && "border-red-400",
-                  )}
-                  value={afficher(options.delaiLecture)}
-                  onChange={(e) =>
-                      modifier({ delaiLecture: nombre(e.target.value) })
-                  }
-              />
-              <span className="text-xs text-iq-gris">
+
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                    type="number"
+                    min={DELAI_LECTURE_MIN}
+                    max={DELAI_LECTURE_MAX}
+                    className={clsx(
+                        champ,
+                        "w-28 max-w-full text-sm font-semibold",
+                        erreur("options", "delaiLecture") && "border-red-400",
+                    )}
+                    value={afficher(options.delaiLecture)}
+                    onChange={(e) =>
+                        modifier({ delaiLecture: nombre(e.target.value) })
+                    }
+                />
+
+                <span className="text-xs text-iq-gris">
                 {t("manager:quiz.delaiLectureAide", {
                   min: DELAI_LECTURE_MIN,
                   max: DELAI_LECTURE_MAX,
                 })}
               </span>
-            </span>
+              </div>
+
               <MessageErreur cle={erreur("options", "delaiLecture")} />
             </label>
 
-            <label className="flex flex-col gap-2">
-            <span className="text-sm font-bold">
+            <label className="flex min-w-0 flex-col gap-2">
+            <span className="text-sm font-bold text-iq-foret">
               {t("manager:quiz.penalite")}
             </span>
-              <span className="flex items-center gap-2">
-              <input
-                  type="number"
-                  min={0}
-                  step={50}
-                  className={clsx(
-                      champ,
-                      "w-24 text-sm font-semibold",
-                      erreur("options", "penalite") && "border-red-400",
-                  )}
-                  value={afficher(options.penalite)}
-                  onChange={(e) => modifier({ penalite: nombre(e.target.value) })}
-              />
-              <span className="text-xs text-iq-gris">
+
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    className={clsx(
+                        champ,
+                        "w-28 max-w-full text-sm font-semibold",
+                        erreur("options", "penalite") && "border-red-400",
+                    )}
+                    value={afficher(options.penalite)}
+                    onChange={(e) => modifier({ penalite: nombre(e.target.value) })}
+                />
+
+                <span className="text-xs text-iq-gris">
                 {t("manager:quiz.penaliteAide")}
               </span>
-            </span>
+              </div>
+
               <MessageErreur cle={erreur("options", "penalite")} />
             </label>
           </div>
 
+          {/* Modes de calcul */}
           {question.type === "QCM" && (
-              <fieldset className="flex flex-col gap-2">
-                <legend className="text-sm font-bold">
+              <fieldset className="flex min-w-0 flex-col gap-3">
+                <legend className="mb-2 text-sm font-bold leading-snug text-iq-foret">
                   {t("manager:quiz.modeScore")}
                 </legend>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {MODES_SCORE.map((mode) => (
-                      <label
-                          key={mode}
-                          className={clsx(
-                              "flex cursor-pointer flex-col gap-1 rounded-lg border p-2",
-                              options.modeScore === mode
-                                  ? "border-iq-mousse bg-iq-sauge/20"
-                                  : "border-iq-bordure hover:bg-iq-champ",
-                          )}
-                      >
-                  <span className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                        type="radio"
-                        name="mode-score"
-                        className="accent-iq-olive"
-                        checked={options.modeScore === mode}
-                        onChange={() => modifier({ modeScore: mode })}
-                    />
-                    {t(`manager:quiz.modesScore.${mode}`)}
-                  </span>
-                        <span className="text-xs text-iq-gris">
-                    {t(`manager:quiz.modesScoreAide.${mode}`)}
-                  </span>
-                      </label>
-                  ))}
+
+                <div className="flex flex-col gap-2">
+                  {MODES_SCORE.map((mode) => {
+                    const selectionne = options.modeScore === mode
+
+                    return (
+                        <label
+                            key={mode}
+                            className={clsx(
+                                "flex min-w-0 cursor-pointer flex-col gap-2 rounded-xl border p-3 transition-colors",
+                                selectionne
+                                    ? "border-iq-mousse bg-iq-sauge/20"
+                                    : "border-iq-bordure bg-white hover:border-iq-mousse hover:bg-iq-champ/50",
+                            )}
+                        >
+                    <span className="flex items-center gap-2">
+                      <input
+                          type="radio"
+                          name="mode-score"
+                          className="size-4 shrink-0 accent-iq-olive"
+                          checked={selectionne}
+                          onChange={() => modifier({ modeScore: mode })}
+                      />
+
+                      <span className="text-sm font-bold text-iq-foret">
+                        {t(`manager:quiz.modesScore.${mode}`)}
+                      </span>
+
+                      {selectionne && (
+                          <span className="ml-auto text-xs font-semibold text-iq-olive">
+                          ✓
+                        </span>
+                      )}
+                    </span>
+
+                          <span className="pl-6 text-xs leading-relaxed text-iq-gris">
+                      {t(`manager:quiz.modesScoreAide.${mode}`)}
+                    </span>
+                        </label>
+                    )
+                  })}
                 </div>
               </fieldset>
           )}
 
-          <label className="flex flex-col gap-2">
-          <span className="text-sm font-bold">
+          {/* Catégorie */}
+          <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm font-bold text-iq-foret">
             {t("manager:quiz.categorie")}
           </span>
+
             <input
                 className={clsx(
                     champ,
-                    "text-sm",
+                    "min-w-0 text-sm",
                     erreur("options", "categorie") && "border-red-400",
                 )}
                 value={options.categorie}
@@ -199,17 +225,23 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
                 placeholder={t("manager:quiz.categoriePlaceholder")}
                 onChange={(e) => modifier({ categorie: e.target.value })}
             />
-            <span className="text-xs text-iq-gris">
+
+            <span className="text-xs leading-relaxed text-iq-gris">
             {t("manager:quiz.categorieAide")}
           </span>
+
             <MessageErreur cle={erreur("options", "categorie")} />
           </label>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-bold">{t("manager:quiz.media")}</span>
-            <div className="flex flex-wrap items-center gap-2">
+          {/* Média */}
+          <div className="flex min-w-0 flex-col gap-3">
+          <span className="text-sm font-bold text-iq-foret">
+            {t("manager:quiz.media")}
+          </span>
+
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <select
-                  className="rounded-lg border border-iq-bordure bg-white px-3 py-2 text-sm font-semibold focus:border-iq-mousse focus:outline-none"
+                  className="max-w-full rounded-lg border border-iq-bordure bg-white px-3 py-2 text-sm font-semibold focus:border-iq-mousse focus:outline-none"
                   value={options.media?.type ?? ""}
                   aria-label={t("manager:quiz.typeMedia")}
                   onChange={(e) =>
@@ -224,6 +256,7 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
                   }
               >
                 <option value="">{t("manager:quiz.sansMedia")}</option>
+
                 {TYPES_MEDIA.map((type) => (
                     <option key={type} value={type}>
                       {t(`manager:quiz.typesMedia.${type}`)}
@@ -254,7 +287,7 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
 
               <button
                   type="button"
-                  className="flex items-center gap-2 rounded-lg border border-iq-bordure bg-white px-3 py-2 text-sm font-bold hover:bg-iq-champ disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-iq-bordure bg-white px-3 py-2 text-sm font-bold transition hover:bg-iq-champ disabled:opacity-50"
                   onClick={() => fichierRef.current?.click()}
                   disabled={envoi.isPending}
               >
@@ -263,13 +296,14 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
                 ) : (
                     <ImagePlus className="size-4" />
                 )}
+
                 {t("manager:quiz.importerMedia")}
               </button>
 
               {options.media && (
                   <button
                       type="button"
-                      className="rounded-lg p-2 text-iq-gris hover:text-red-600"
+                      className="rounded-lg p-2 text-iq-gris transition hover:bg-red-50 hover:text-red-600"
                       onClick={() => modifier({ media: null })}
                       title={t("manager:quiz.retirerMedia")}
                   >
@@ -297,12 +331,16 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
             )}
           </div>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-bold">{t("manager:quiz.note")}</span>
+          {/* Note */}
+          <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm font-bold text-iq-foret">
+            {t("manager:quiz.note")}
+          </span>
+
             <textarea
                 className={clsx(
                     champ,
-                    "min-h-16 resize-y text-sm",
+                    "min-h-20 min-w-0 resize-y text-sm",
                     erreur("options", "note") && "border-red-400",
                 )}
                 value={options.note}
@@ -310,6 +348,7 @@ const OptionsAvancees = ({ question, erreurs, onChange }: Props) => {
                 placeholder={t("manager:quiz.notePlaceholder")}
                 onChange={(e) => modifier({ note: e.target.value })}
             />
+
             <MessageErreur cle={erreur("options", "note")} />
           </label>
         </div>
