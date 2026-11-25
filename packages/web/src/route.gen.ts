@@ -21,6 +21,8 @@ import { Route as ManagerCoursCoursIdRouteImport } from './pages/manager/cours/$
 import { Route as ManagerQuizzIndexRouteImport } from './pages/manager/quizz/index'
 import { Route as ManagerQuizzQuizzIdRouteImport } from './pages/manager/quizz/$quizzId'
 import { Route as PartyManagerGameIdRouteImport } from './pages/party/manager/$gameId'
+import { Route as ManagerCoursPresenterCoursIdRouteImport } from './pages/manager/cours/presenter.$coursId'
+import { Route as ManagerCoursQuizCoursIdRouteImport } from './pages/manager/cours/quiz.$coursId'
 
 const authLayoutRoute = authLayoutRouteImport.update({
   id: '/(auth)',
@@ -81,6 +83,17 @@ const PartyManagerGameIdRoute = PartyManagerGameIdRouteImport.update({
   path: '/party/manager/$gameId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerCoursPresenterCoursIdRoute =
+  ManagerCoursPresenterCoursIdRouteImport.update({
+    id: '/presenter/$coursId',
+    path: '/presenter/$coursId',
+    getParentRoute: () => ManagerCoursLayoutRoute,
+  } as any)
+const ManagerCoursQuizCoursIdRoute = ManagerCoursQuizCoursIdRouteImport.update({
+  id: '/quiz/$coursId',
+  path: '/quiz/$coursId',
+  getParentRoute: () => ManagerCoursLayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof authIndexRoute
@@ -94,6 +107,8 @@ export interface FileRoutesByFullPath {
   '/manager/': typeof authManagerIndexRoute
   '/manager/cours/': typeof ManagerCoursIndexRoute
   '/manager/quizz/': typeof ManagerQuizzIndexRoute
+  '/manager/cours/presenter/$coursId': typeof ManagerCoursPresenterCoursIdRoute
+  '/manager/cours/quiz/$coursId': typeof ManagerCoursQuizCoursIdRoute
 }
 export interface FileRoutesByTo {
   '/manager/config': typeof ManagerConfigRoute
@@ -105,6 +120,8 @@ export interface FileRoutesByTo {
   '/manager': typeof authManagerIndexRoute
   '/manager/cours': typeof ManagerCoursIndexRoute
   '/manager/quizz': typeof ManagerQuizzIndexRoute
+  '/manager/cours/presenter/$coursId': typeof ManagerCoursPresenterCoursIdRoute
+  '/manager/cours/quiz/$coursId': typeof ManagerCoursQuizCoursIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,6 +137,8 @@ export interface FileRoutesById {
   '/(auth)/manager/': typeof authManagerIndexRoute
   '/manager/cours/': typeof ManagerCoursIndexRoute
   '/manager/quizz/': typeof ManagerQuizzIndexRoute
+  '/manager/cours/presenter/$coursId': typeof ManagerCoursPresenterCoursIdRoute
+  '/manager/cours/quiz/$coursId': typeof ManagerCoursQuizCoursIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -135,6 +154,8 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/manager/cours/'
     | '/manager/quizz/'
+    | '/manager/cours/presenter/$coursId'
+    | '/manager/cours/quiz/$coursId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/manager/config'
@@ -146,6 +167,8 @@ export interface FileRouteTypes {
     | '/manager'
     | '/manager/cours'
     | '/manager/quizz'
+    | '/manager/cours/presenter/$coursId'
+    | '/manager/cours/quiz/$coursId'
   id:
     | '__root__'
     | '/(auth)'
@@ -160,6 +183,8 @@ export interface FileRouteTypes {
     | '/(auth)/manager/'
     | '/manager/cours/'
     | '/manager/quizz/'
+    | '/manager/cours/presenter/$coursId'
+    | '/manager/cours/quiz/$coursId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -257,6 +282,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PartyManagerGameIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/cours/presenter/$coursId': {
+      id: '/manager/cours/presenter/$coursId'
+      path: '/presenter/$coursId'
+      fullPath: '/manager/cours/presenter/$coursId'
+      preLoaderRoute: typeof ManagerCoursPresenterCoursIdRouteImport
+      parentRoute: typeof ManagerCoursLayoutRoute
+    }
+    '/manager/cours/quiz/$coursId': {
+      id: '/manager/cours/quiz/$coursId'
+      path: '/quiz/$coursId'
+      fullPath: '/manager/cours/quiz/$coursId'
+      preLoaderRoute: typeof ManagerCoursQuizCoursIdRouteImport
+      parentRoute: typeof ManagerCoursLayoutRoute
+    }
   }
 }
 
@@ -277,11 +316,15 @@ const authLayoutRouteWithChildren = authLayoutRoute._addFileChildren(
 interface ManagerCoursLayoutRouteChildren {
   ManagerCoursCoursIdRoute: typeof ManagerCoursCoursIdRoute
   ManagerCoursIndexRoute: typeof ManagerCoursIndexRoute
+  ManagerCoursPresenterCoursIdRoute: typeof ManagerCoursPresenterCoursIdRoute
+  ManagerCoursQuizCoursIdRoute: typeof ManagerCoursQuizCoursIdRoute
 }
 
 const ManagerCoursLayoutRouteChildren: ManagerCoursLayoutRouteChildren = {
   ManagerCoursCoursIdRoute: ManagerCoursCoursIdRoute,
   ManagerCoursIndexRoute: ManagerCoursIndexRoute,
+  ManagerCoursPresenterCoursIdRoute: ManagerCoursPresenterCoursIdRoute,
+  ManagerCoursQuizCoursIdRoute: ManagerCoursQuizCoursIdRoute,
 }
 
 const ManagerCoursLayoutRouteWithChildren =

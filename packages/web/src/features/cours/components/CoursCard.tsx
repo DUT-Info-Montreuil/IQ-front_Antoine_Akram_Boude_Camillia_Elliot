@@ -92,8 +92,12 @@ const CoursCard = ({ cours }: Props) => {
           </button>
           <button
             className={bouton.sombre}
-            disabled
-            title={t("manager:cours.bientot")}
+            onClick={() =>
+              navigate({
+                to: "/manager/cours/presenter/$coursId",
+                params: { coursId: String(cours.id) },
+              })
+            }
           >
             <Play className="size-4 fill-current" />
             {t("manager:cours.presenter")}

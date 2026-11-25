@@ -13,8 +13,16 @@ import { ApiError } from "@razzia/web/lib/api"
  */
 
 const BASE = "iq-mock-cours"
-const STORE_COURS = "cours"
+
+const VERSION_BASE = 2
+
+export const STORE_COURS = "cours"
+
 const STORE_FICHIERS = "fichiers"
+
+/** Quiz des cours (mock de QuizService, SCRUM-56). */
+export const STORE_QUIZ = "quiz"
+
 const LATENCE_MS = 300
 
 /** Enseignant simulé, en attendant l'authentification LDAP (CU 1.1). */
@@ -36,11 +44,23 @@ const erreurBase = (error: DOMException | null) =>
 
 const ouvrirBase = () => {
   connexion ??= new Promise((resolve, reject) => {
-    const demande = indexedDB.open(BASE, 1)
+    const demande = indexedDB.open(BASE, VERSION_BASE)
 
     demande.onupgradeneeded = () => {
-      demande.result.createObjectStore(STORE_COURS, { keyPath: "id" })
-      demande.result.createObjectStore(STORE_FICHIERS)
+      const base = demande.result
+      const stores = base.objectStoreNames
+
+      if (!stores.contains(STORE_COURS)) {
+        base.createObjectStore(STORE_COURS, { keyPath: "id" })
+      }
+
+      if (!stores.contains(STORE_FICHIERS)) {
+        base.createObjectStore(STORE_FICHIERS)
+      }
+
+      if (!stores.contains(STORE_QUIZ)) {
+        base.createObjectStore(STORE_QUIZ, { keyPath: "id" })
+      }
     }
     demande.onsuccess = () => resolve(demande.result)
     demande.onerror = () => reject(erreurBase(demande.error))
@@ -49,7 +69,7 @@ const ouvrirBase = () => {
   return connexion
 }
 
-const executer = async <T>(
+export const executer = async <T>(
   stores: string[],
   mode: IDBTransactionMode,
   action: (tx: IDBTransaction) => IDBRequest<T> | undefined,
@@ -68,7 +88,7 @@ const executer = async <T>(
 
 const cleFichier = (idCours: number, numero: number) => `${idCours}/v${numero}`
 
-const patienter = () =>
+export const patienter = () =>
   new Promise((resolve) => {
     setTimeout(resolve, LATENCE_MS)
   })
