@@ -71,8 +71,8 @@
   },
   "questionHasErrors": "Cette question contient des erreurs",
   "questionType": {
-    "single": "Choix unique",
-    "multi": "Choix multiple",
+    "single": "QCM",
+    "multi": "QCM",
     "estimation": "Estimation"
   },
   "quizzSaved": "Quizz enregistré avec succès",

@@ -86,14 +86,35 @@ export const quizzValidator = z
       }
 
       quizz.questions.forEach((question, index) => {
-        if (question.solutions && question.solutions.length > 0) {
-          return
+        const solutions = question.solutions ?? []
+
+        if (solutions.length === 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["questions", index, "solutions"],
+            message: "errors:quizz.noSolution",
+          })
         }
 
-        ctx.addIssue({
-          code: "custom",
-          path: ["questions", index, "solutions"],
-          message: "errors:quizz.noSolution",
+        question.answers.forEach((_, answerIndex) => {
+          const isCorrect = solutions.includes(answerIndex)
+          const points = question.answerPoints?.[answerIndex] ?? 0
+
+          if (isCorrect && points < 1) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["questions", index, "answerPoints", answerIndex],
+              message: "Une bonne réponse doit avoir au moins 1 point.",
+            })
+          }
+
+          if (!isCorrect && points !== 0) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["questions", index, "answerPoints", answerIndex],
+              message: "Une mauvaise réponse doit avoir 0 point.",
+            })
+          }
         })
       })
     })

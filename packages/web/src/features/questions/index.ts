@@ -1,4 +1,5 @@
 import type { ComponentType } from "react"
+import { QUESTION_TYPES } from "@razzia/common/constants"
 import type {
   Question,
   QuestionOptions,
@@ -34,6 +35,6 @@ export const QUESTION_REGISTRY: Record<QuestionType, QuestionRegistryEntry> = {
   estimation,
 }
 
-export const QUESTION_TYPE_LIST = Object.keys(
-  QUESTION_REGISTRY,
-) as QuestionType[]
+export const QUESTION_TYPE_LIST = (Object.keys(
+    QUESTION_REGISTRY,
+) as QuestionType[]).filter((type) => type !== QUESTION_TYPES.SINGLE)

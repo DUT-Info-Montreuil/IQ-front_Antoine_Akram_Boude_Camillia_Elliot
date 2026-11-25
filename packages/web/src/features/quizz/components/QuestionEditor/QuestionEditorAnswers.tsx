@@ -20,6 +20,9 @@ import {
   type QuizzFormValues,
 } from "@razzia/web/features/quizz/contexts/quizz-editor-context"
 
+const getDefaultPoints = (maxPoints: number, correctAnswersCount: number) =>
+    Math.max(1, Math.floor(maxPoints / Math.max(correctAnswersCount, 1)))
+
 const QuestionEditorAnswers = () => {
   const {
     currentQuestion,
@@ -36,59 +39,57 @@ const QuestionEditorAnswers = () => {
   const { SolutionPicker } = QUESTION_REGISTRY[questionType]
 
   const addAnswer = () => {
-    if (currentQuestion.answers.length >= MAX_ANSWERS) {
-      return
-    }
+    if (currentQuestion.answers.length >= MAX_ANSWERS) return
+
+    const existingPoints = currentQuestion.answers.map((_, index) =>
+        currentQuestion.solutions?.includes(index)
+            ? Math.max(
+                1,
+                currentQuestion.answerPoints?.[index] ?? getDefaultPoints(
+                    currentQuestion.maxPoints ?? MAX_POINTS,
+                    currentQuestion.solutions.length,
+                ),
+            )
+            : 0,
+    )
 
     updateQuestion(currentIndex, {
       answers: [...currentQuestion.answers, ""],
-      answerPoints: [
-        ...(currentQuestion.answerPoints ??
-            currentQuestion.answers.map((_, i) =>
-                currentQuestion.solutions?.includes(i)
-                    ? Math.floor(
-                        (currentQuestion.maxPoints ?? MAX_POINTS) /
-                        Math.max(currentQuestion.solutions?.length ?? 1, 1),
-                    )
-                    : 0,
-            )),
-        0,
-      ],
+      answerPoints: [...existingPoints, 0],
     })
   }
 
   const removeAnswer = () => {
-    if (currentQuestion.answers.length <= MIN_ANSWERS) {
-      return
-    }
+    if (currentQuestion.answers.length <= MIN_ANSWERS) return
 
-    const next = currentQuestion.answers.slice(0, -1)
-    const maxIndex = next.length - 1
-    const nextSolution = (currentQuestion.solutions ?? []).filter(
-        (s) => s <= maxIndex,
+    const nextAnswers = currentQuestion.answers.slice(0, -1)
+
+    const nextSolutions = (currentQuestion.solutions ?? []).filter(
+        (solution) => solution < nextAnswers.length,
     )
 
-    const solutions = nextSolution.length > 0 ? nextSolution : [0]
+    const solutions = nextSolutions.length > 0 ? nextSolutions : [0]
 
-    const previousPoints =
-        currentQuestion.answerPoints ??
-        currentQuestion.answers.map((_, i) =>
-            currentQuestion.solutions?.includes(i)
-                ? Math.floor(
-                    (currentQuestion.maxPoints ?? MAX_POINTS) /
-                    Math.max(currentQuestion.solutions?.length ?? 1, 1),
-                )
-                : 0,
-        )
+    const previousPoints = currentQuestion.answers.map((_, index) =>
+        currentQuestion.solutions?.includes(index)
+            ? Math.max(
+                1,
+                currentQuestion.answerPoints?.[index] ?? getDefaultPoints(
+                    currentQuestion.maxPoints ?? MAX_POINTS,
+                    currentQuestion.solutions.length,
+                ),
+            )
+            : 0,
+    )
 
-    const answerPoints = previousPoints.slice(0, next.length)
+    const answerPoints = previousPoints.slice(0, nextAnswers.length)
 
-    if (nextSolution.length === 0) {
-      answerPoints[0] = currentQuestion.maxPoints ?? MAX_POINTS
+    if (nextSolutions.length === 0) {
+      answerPoints[0] = Math.max(1, currentQuestion.maxPoints ?? MAX_POINTS)
     }
 
     updateQuestion(currentIndex, {
-      answers: next,
+      answers: nextAnswers,
       answerPoints,
       solutions,
     })
@@ -96,7 +97,6 @@ const QuestionEditorAnswers = () => {
 
   return (
       <div className="z-10 flex flex-col gap-3">
-        {/* En-tête */}
         <div className="flex items-center justify-between px-1">
           <div className="rounded-lg bg-background px-2 py-1 text-sm font-semibold text-muted-foreground">
             {currentQuestion.answers.length} {t("quizz:answersCountSuffix")}
@@ -104,6 +104,7 @@ const QuestionEditorAnswers = () => {
 
           <div className="flex gap-2">
             <button
+                type="button"
                 onClick={removeAnswer}
                 aria-label={t("quizz:removeAnswer")}
                 disabled={currentQuestion.answers.length <= MIN_ANSWERS}
@@ -113,6 +114,7 @@ const QuestionEditorAnswers = () => {
             </button>
 
             <button
+                type="button"
                 onClick={addAnswer}
                 aria-label={t("quizz:addAnswer")}
                 disabled={currentQuestion.answers.length >= MAX_ANSWERS}
@@ -123,103 +125,92 @@ const QuestionEditorAnswers = () => {
           </div>
         </div>
 
-        {/* Liste des réponses */}
         <div className="flex flex-col gap-2">
-          {currentQuestion.answers.map((_, i) => {
-            const isSelected =
-                currentQuestion.solutions?.includes(i) ?? false
+          {currentQuestion.answers.map((_, index) => {
+            const isSelected = currentQuestion.solutions?.includes(index) ?? false
 
-            const defaultAnswerPoints = isSelected
-                ? Math.floor(
-                    (currentQuestion.maxPoints ?? MAX_POINTS) /
-                    Math.max(currentQuestion.solutions?.length ?? 1, 1),
-                )
-                : 0
+            const defaultAnswerPoints = getDefaultPoints(
+                currentQuestion.maxPoints ?? MAX_POINTS,
+                currentQuestion.solutions?.length ?? 1,
+            )
 
             return (
                 <Controller
-                    key={i}
+                    key={index}
                     control={control}
-                    name={questionPath(`answers.${i}`)}
+                    name={questionPath(`answers.${index}`)}
                     render={({ field, fieldState }) => (
                         <div className="flex min-w-0 flex-col gap-1">
                           <div
                               className={clsx(
-                                  "flex min-h-[52px] flex-wrap items-center gap-3 rounded-xl border px-2 py-2 sm:flex-nowrap sm:px-3",
+                                  "flex min-h-[56px] flex-wrap items-center gap-3 rounded-xl border px-2 py-2 sm:flex-nowrap sm:px-3",
                                   isSelected
                                       ? "border-green-700 bg-[#e8f0dc]"
                                       : "border-[#dedfca] bg-[#f5f5ed]",
                                   fieldState.invalid && "ring-2 ring-red-500",
                               )}
                           >
-                            {/* Lettre de réponse */}
-                            <span
-                                className={clsx(
-                                    "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white",
-                                    ANSWERS_COLORS[i],
-                                )}
-                            >
-                      {ANSWERS_LABELS[i]}
+                    <span
+                        className={clsx(
+                            "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white",
+                            ANSWERS_COLORS[index],
+                        )}
+                    >
+                      {ANSWERS_LABELS[index]}
                     </span>
 
-                            {/* Texte de la réponse */}
                             <input
                                 {...field}
                                 aria-invalid={fieldState.invalid}
                                 aria-describedby={
-                                  fieldState.invalid
-                                      ? `${field.name}-error`
-                                      : undefined
+                                  fieldState.invalid ? `${field.name}-error` : undefined
                                 }
                                 className="min-w-0 flex-1 bg-transparent px-1 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground"
                                 placeholder={t("quizz:addAnswerPlaceholder")}
                             />
 
-                            {/* Bonne réponse */}
-                            {gameMode !== QUIZZ_MODES.SURVEY &&
-                                SolutionPicker && (
-                                    <div className="flex shrink-0 items-center gap-1.5">
-                                      <SolutionPicker
-                                          index={i}
-                                          isSelected={isSelected}
-                                      />
-                                      <span className="whitespace-nowrap text-xs font-semibold text-foreground">
-                            Bonne réponse
-                          </span>
-                                    </div>
-                                )}
+                            {gameMode !== QUIZZ_MODES.SURVEY && SolutionPicker && (
+                                <div className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-1">
+                                  <SolutionPicker index={index} isSelected={isSelected} />
 
-                            {/* Points */}
+                                  <span className="whitespace-nowrap text-xs font-bold text-foreground">
+                          Bonne réponse
+                        </span>
+                                </div>
+                            )}
+
                             {gameMode !== QUIZZ_MODES.SURVEY &&
-                                (questionType === QUESTION_TYPES.SINGLE ||
-                                    questionType === QUESTION_TYPES.MULTI) && (
+                                questionType === QUESTION_TYPES.MULTI && (
                                     <Controller
                                         control={control}
-                                        name={questionPath(`answerPoints.${i}`)}
+                                        name={questionPath(`answerPoints.${index}`)}
                                         render={({ field: pointsField }) => (
                                             <label className="flex shrink-0 items-center gap-2">
                                               <input
                                                   type="number"
-                                                  min={0}
+                                                  min={isSelected ? 1 : 0}
                                                   step={1}
                                                   value={
-                                                      pointsField.value ?? defaultAnswerPoints
+                                                    isSelected
+                                                        ? Math.max(1, pointsField.value ?? defaultAnswerPoints)
+                                                        : 0
                                                   }
                                                   onChange={(event) =>
                                                       pointsField.onChange(
-                                                          event.target.value === ""
-                                                              ? 0
-                                                              : Math.max(
-                                                                  0,
-                                                                  Math.floor(
-                                                                      Number(event.target.value),
-                                                                  ),
-                                                              ),
+                                                          isSelected
+                                                              ? Math.max(
+                                                                  1,
+                                                                  Math.floor(Number(event.target.value) || 1),
+                                                              )
+                                                              : 0,
                                                       )
                                                   }
                                                   onBlur={pointsField.onBlur}
-                                                  className="w-[68px] rounded-lg border border-[#d9ddc8] bg-background px-2 py-1.5 text-center text-sm font-semibold text-foreground outline-none focus:border-primary"
+                                                  disabled={!isSelected}
+                                                  aria-label={`Points pour la réponse ${ANSWERS_LABELS[index]}`}
+                                                  className="w-[68px] rounded-lg border border-[#d9ddc8] bg-background px-2 py-1.5 text-center text-sm font-semibold text-foreground outline-none focus:border-primary disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                                               />
+
                                               <span className="text-xs text-muted-foreground">
                                 pts
                               </span>
