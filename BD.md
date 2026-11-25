@@ -48,6 +48,7 @@ partagée.
 | `leaderboard` | **id_leaderboard**, id_proprietaire → utilisateur, titre, type, date_creation |
 | `leaderboard_quiz` | **id_leaderboard** → leaderboard, **id_quiz** → quiz |
 | `page_classement` | **id_page**, id_cours → cours, id_leaderboard → leaderboard, apres_page, rang, statut_placement, ordre_mise_de_cote |
+| `element_deroule` | **id_element**, id_cours → cours, position, type (PAGE ou QUIZ), numero_page, id_quiz → quiz (migration 0002, hors MLD) |
 
 ### Séances et résultats
 
@@ -69,6 +70,7 @@ LIBRE → texte saisi.
 |---|---|
 | `0000_init.sql` | Les 18 tables du MLD, enums, contraintes et index |
 | `0001_options_quiz.sql` | Ajoute `question.options` et `quiz.options_partie` (SCRUM-12) |
+| `0002_ordre_deroule.sql` | Ajoute l'enum `type_element_deroule` et la table `element_deroule` (SCRUM-17) |
 
 La migration 0001 ajoute deux colonnes `jsonb NOT NULL` qui ne sont pas dans le MLD du dossier. Elles
 stockent les réglages du moteur Razzia que l'éditeur E4 envoie avec `QuizSaisie` (ajouts au contrat
@@ -83,7 +85,46 @@ Ces réglages ne servent qu'au moteur de partie et ne sont jamais filtrés en SQ
 évite six colonnes et un enum de plus. Leurs règles sont vérifiées avant l'écriture par
 `quizSaisieSchema` ([`packages/common/src/validators/quiz.ts`](packages/common/src/validators/quiz.ts)).
 
-Appliquer la migration sur une base existante :
+### Migration 0002 : ordre global du déroulé (SCRUM-17)
+
+Le dossier de conception ne déplace que les quiz, repérés par `quiz.apres_page` et `quiz.rang`. Le
+glisser-déposer de l'éditeur E3 permet aussi de **réordonner les pages du PDF** et de placer un quiz
+**avant la page 1**, ce que ces deux colonnes ne savent pas représenter. C'est un écart au dossier,
+décidé par l'équipe (spécification du front : `integration-backend-deroule-cours.md`).
+
+Table `element_deroule`, une ligne par élément du déroulé d'un cours :
+
+| Colonne | Contenu |
+|---|---|
+| `position` | Rang de l'élément dans le déroulé (0, 1, 2…), unique par cours |
+| `type` | `PAGE` ou `QUIZ` |
+| `numero_page` | Numéro de la page **dans le PDF de la version courante** (pour `PAGE`). Le fichier n'est jamais modifié |
+| `id_quiz` | Quiz placé à cet endroit (pour `QUIZ`), supprimé en cascade avec le quiz |
+
+Contraintes : unicité de `(id_cours, position)`, de `(id_cours, numero_page)` et de `id_quiz` ; un `CHECK`
+impose `numero_page ≥ 1` sans `id_quiz` pour une page, et `id_quiz` sans `numero_page` pour un quiz.
+Supprimer le cours supprime son ordre.
+
+**Une seule source de vérité :**
+
+- Tant que l'enseignant n'a rien réorganisé, la table est vide pour ce cours. L'ordre est alors **déduit**
+  (pages dans l'ordre du PDF, chaque quiz après sa page selon son rang) et n'est pas enregistré.
+- Dès le premier `PUT /api/cours/{id}/deroule`, l'ordre enregistré **fait référence**. `quiz.apres_page`
+  et `quiz.rang` en sont recalculés dans la même transaction : `apres_page` = numéro de la dernière page
+  qui précède le quiz (**0** s'il est avant la page 1), `rang` = sa place parmi les quiz qui suivent cette
+  page. Ils restent ainsi justes pour le code qui les utilise encore (QuizService, présentation).
+- Un quiz mis de côté (CU 1.4) qui revient dans l'ordre repasse au statut `PLACE`.
+- Créer ou modifier un quiz par QuizService le range dans l'ordre enregistré, après sa page et à son rang.
+  Le supprimer le retire de l'ordre (cascade).
+
+`quiz.apres_page = 0` est désormais permis (quiz avant la première page) ; `quizSaisieSchema` l'accepte.
+
+Limite : l'ordre suit les pages de la **version courante**. Le CU 1.4 (nouvelle version du PDF) devra le
+recalculer quand le nombre de pages change.
+
+### Appliquer les migrations
+
+Sur une base existante :
 
 ```bash
 corepack pnpm --filter socket db:migrate
@@ -103,6 +144,7 @@ corepack pnpm --filter socket db:migrate
 | `statut_lancement` | lancement.statut | OUVERTE, CLOSE |
 | `mode_correction` | reponse.mode_correction | AUTO, A_CORRIGER, MANUELLE |
 | `mode_anonymisation` | journal_anonymisation.mode | AUTO, MANUEL |
+| `type_element_deroule` | element_deroule.type | PAGE, QUIZ |
 
 ## Contraintes et index
 
@@ -132,5 +174,8 @@ corepack pnpm --filter socket db:migrate
 - L'application n'exécute pas les migrations au démarrage (prévu par le dossier §2.6) : lancer
   `db:migrate` après chaque mise à jour du dépôt.
 - Le rang des quiz placés après une même page est recalculé par QuizService à chaque création,
-  modification ou suppression. Il n'y a pas de contrainte d'unicité sur `(id_cours, apres_page, rang)`,
-  pour pouvoir décaler les rangs dans une transaction.
+  modification ou suppression, et par DerouleService à chaque réorganisation. Il n'y a pas de
+  contrainte d'unicité sur `(id_cours, apres_page, rang)`, pour pouvoir décaler les rangs dans une
+  transaction.
+- Chaque page du PDF présente une fois dans `element_deroule` : vérifié par DerouleService (le nombre de
+  pages vient de `version_pdf`, une autre table).

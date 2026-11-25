@@ -14,6 +14,7 @@ import {
   versionPdf,
 } from "@razzia/socket/db/schema"
 import { verifierAcces } from "@razzia/socket/services/cours"
+import { replacerQuizDansOrdre } from "@razzia/socket/services/deroule"
 import {
   conflict,
   invalidInput,
@@ -88,6 +89,8 @@ const placer = async (
       tx.update(quiz).set({ rang: index }).where(eq(quiz.idQuiz, id)),
     ),
   )
+
+  return rangRetenu
 }
 
 /** Après un retrait, les quiz restants de la page se suivent sans trou. */
@@ -290,7 +293,13 @@ export const creerQuiz = async (
       .returning({ idQuiz: quiz.idQuiz })
 
     await insererQuestions(tx, cree.idQuiz, saisie.questions)
-    await placer(tx, idCours, { ...saisie, idQuiz: cree.idQuiz })
+    const rang = await placer(tx, idCours, { ...saisie, idQuiz: cree.idQuiz })
+
+    await replacerQuizDansOrdre(tx, idCours, {
+      idQuiz: cree.idQuiz,
+      apresPage: saisie.apresPage,
+      rang,
+    })
     await toucherCours(tx, idCours)
 
     return cree.idQuiz
@@ -340,7 +349,13 @@ export const modifierQuiz = async (
       .where(eq(quiz.idQuiz, idQuiz))
     await tx.delete(question).where(eq(question.idQuiz, idQuiz))
     await insererQuestions(tx, idQuiz, saisie.questions)
-    await placer(tx, idCours, { ...saisie, idQuiz })
+    const rang = await placer(tx, idCours, { ...saisie, idQuiz })
+
+    await replacerQuizDansOrdre(tx, idCours, {
+      idQuiz,
+      apresPage: saisie.apresPage,
+      rang,
+    })
 
     if (ancien.apresPage !== null && ancien.apresPage !== saisie.apresPage) {
       await renumeroter(tx, idCours, ancien.apresPage)

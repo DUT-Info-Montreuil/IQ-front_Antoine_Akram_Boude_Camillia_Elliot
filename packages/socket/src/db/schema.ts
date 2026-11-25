@@ -56,6 +56,12 @@ export const modeAnonymisation = pgEnum("mode_anonymisation", [
   "MANUEL",
 ])
 
+// Migration 0002 : éléments de l'ordre global du déroulé (SCRUM-17).
+export const typeElementDeroule = pgEnum("type_element_deroule", [
+  "PAGE",
+  "QUIZ",
+])
+
 const id = (name: string) =>
   integer(name).primaryKey().generatedAlwaysAsIdentity()
 const horodatage = (name: string) => timestamp(name, { withTimezone: true })
@@ -229,6 +235,39 @@ export const leaderboardQuiz = pgTable(
   (t) => [
     primaryKey({ columns: [t.idLeaderboard, t.idQuiz] }),
     index("leaderboard_quiz_quiz_idx").on(t.idQuiz),
+  ],
+)
+
+/**
+ * Migration 0002 : ordre global du déroulé, pages du PDF et quiz mêlés (SCRUM-17).
+ * Absent tant que l'enseignant n'a rien réorganisé : l'ordre est alors déduit
+ * de quiz.apres_page et quiz.rang. Une fois présent, il fait référence et
+ * apres_page / rang en sont recalculés.
+ */
+export const elementDeroule = pgTable(
+  "element_deroule",
+  {
+    idElement: id("id_element"),
+    idCours: integer("id_cours")
+      .notNull()
+      .references(() => cours.idCours, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    type: typeElementDeroule("type").notNull(),
+    // Numéro de la page dans le PDF de la version courante ; le fichier n'est jamais modifié.
+    numeroPage: integer("numero_page"),
+    idQuiz: integer("id_quiz").references(() => quiz.idQuiz, {
+      onDelete: "cascade",
+    }),
+  },
+  (t) => [
+    uniqueIndex("element_deroule_position_uq").on(t.idCours, t.position),
+    uniqueIndex("element_deroule_page_uq").on(t.idCours, t.numeroPage),
+    uniqueIndex("element_deroule_quiz_uq").on(t.idQuiz),
+    check(
+      "element_deroule_type_ck",
+      sql`(${t.type} = 'PAGE' AND ${t.numeroPage} >= 1 AND ${t.idQuiz} IS NULL)
+        OR (${t.type} = 'QUIZ' AND ${t.idQuiz} IS NOT NULL AND ${t.numeroPage} IS NULL)`,
+    ),
   ],
 )
 

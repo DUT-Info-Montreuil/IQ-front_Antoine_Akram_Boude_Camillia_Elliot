@@ -115,7 +115,7 @@ Noms en français sans accent. Les éléments repris de Razzia gardent leur nom 
 - `lancement` (ouverture d'une question en séance, date_cloture_prevue, statut OUVERTE|CLOSE)
 - `reponse` (contenu, temps_restant_ms, points_reponse, points_classement, mode_correction AUTO|A_CORRIGER|MANUELLE), `correction`, `journal_anonymisation`
 
-Le schéma est implémenté avec Drizzle dans `packages/socket/src/db/` et décrit dans `BD.md`. La migration `0001` ajoute `question.options` et `quiz.options_partie` (jsonb), absents du dossier, pour les réglages Razzia saisis dans E4.
+Le schéma est implémenté avec Drizzle dans `packages/socket/src/db/` et décrit dans `BD.md`. La migration `0001` ajoute `question.options` et `quiz.options_partie` (jsonb), absents du dossier, pour les réglages Razzia saisis dans E4. La migration `0002` ajoute la table `element_deroule` (ordre global des pages du PDF et des quiz, SCRUM-17), elle aussi absente du dossier : une fois enregistré, cet ordre fait référence et `quiz.apres_page` / `quiz.rang` en sont recalculés (`apres_page = 0` : quiz avant la page 1).
 
 Règles clés (RG) :
 - **RG-06** : un quiz a au moins une question ; une question a une durée et des points max.
@@ -156,7 +156,7 @@ Codes de retour : 400 saisie, 401, 403 droit, 404, 409 conflit d'état, 410 trop
 | `GET /api/cours/{id}` | Lecture | `CoursDetail` (versions, deroule, misDeCote) |
 | `GET /api/cours/{id}/versions/{n}/fichier` | Lecture | `application/pdf` |
 | `POST /api/cours/{id}/versions` | Propriétaire | nouvelle version, éléments mis de côté |
-| `PUT /api/cours/{id}/deroule` | Édition | positions des quiz et pages de classement |
+| `PUT /api/cours/{id}/deroule` | Édition | `{ordre: ElementOrdre[]}` (toutes les pages du PDF et les quiz, dans l'ordre voulu) → `{ordre}` avec positions ; 400 page, quiz ou doublon invalide, 409 question ouverte. **Écart au dossier** : les pages du PDF sont réordonnables (SCRUM-17) |
 | `POST /api/cours/{id}/quiz` | Édition | `QuizSaisie` → 201 `Quiz` ; 400 saisie ou page inexistante |
 | `GET` / `PUT` / `DELETE /api/quiz/{id}` | Lecture / Édition | 409 si une question est ouverte ; `DELETE ?forcer=true` supprime aussi les réponses (409 sinon) |
 | `POST /api/quiz/expressions/test` | Enseignant | `{motif, exemples[]}` |
@@ -171,6 +171,7 @@ Objets principaux :
 - `QuizSaisie` : titre, apresPage, rang, modeAffichage, afficherLeaderboard, sertNotation, optionsPartie, questions[]. Schéma zod partagé : `common/src/validators/quiz.ts`.
 - `QuestionSaisie` : type, enonce, dureeSecondes, pointsMax, propositions[], paires[], expressions[], options.
 - `Quiz` : `QuizSaisie` + id, idCours.
+- `ElementOrdre` : `{type: "PAGE", numeroPdf}` ou `{type: "QUIZ", id}`. `CoursDetail.ordre` en donne la liste avec `position` (0, 1, 2…) : c'est l'ordre que l'éditeur E3 et la présentation doivent afficher. Schéma zod : `common/src/validators/deroule.ts`.
 
 Événements temps réel ajoutés par IQ : `manager:openQuiz {idSeance, idQuiz}` (réponse `manager:quizOpened {idSeance, idQuiz, gameId, inviteCode, questionsIgnorees}`, refus en `game:errorMessage`), `manager:endQuiz`, `player:matchedPairs`, `player:freeAnswer`, statut `SHOW_STATS`. Les autres reprennent les noms Razzia (`manager:advance`, `player:login`, `player:selectedAnswer`, `game:status`…).
 
@@ -193,6 +194,7 @@ Modules front IQ :
 - Base PostgreSQL et Drizzle (SCRUM-67), décrite dans `BD.md`.
 - SCRUM-49 « Importer un support PDF » : `GET/POST /api/cours`, `GET /api/cours/{id}`, `GET …/versions/{n}/fichier` (CoursService, PdfService).
 - SCRUM-56 « Insérer un quiz dans le cours » : `POST /api/cours/{id}/quiz`, `GET/PUT/DELETE /api/quiz/{id}` (QuizService). Le quiz est rangé à son rang après sa page, les autres quiz de la page sont décalés.
+- SCRUM-80 (back de SCRUM-17) « Déplacer » : `PUT /api/cours/{id}/deroule` et `CoursDetail.ordre` (DerouleService). Pages du PDF et quiz réordonnables, quiz possible avant la page 1, quiz mis de côté replacés. Enregistrement atomique ; QuizService range aussi ses créations et modifications dans l'ordre enregistré. Côté front : E3 doit envoyer l'ordre complet après un glisser-déposer, et **la présentation doit lire `ordre`** au lieu de recalculer depuis `apresPage`.
 - SCRUM-64 « Ouvrir un quiz » (CU 2.1, figure 12) : `POST /api/seances`, `POST /api/seances/{id}/fin` et l'événement `manager:openQuiz`. Le serveur lit le quiz en base, le convertit en QCM Razzia et crée la partie **avec le code de la séance**, commun à tous ses quiz. Contrôles : animateur, séance ouverte, aucune question ouverte, quiz du cours. Les joueurs des quiz précédents de la séance sont inscrits d'office (`game:successJoin`). Remplace `features/seance/moteur.ts` côté front. Hors périmètre : réponses et lancements en base (SCRUM-28), `GET /api/acces/{code}` et participants LDAP (CU 2.2), reconstruction après redémarrage, RELIER/LIBRE en séance.
 - Limites communes : un seul enseignant provisoire (`enseignant`) en attendant le LDAP, routes réservées au gestionnaire Razzia, PDF rangés dans `config/pdf/`.
 

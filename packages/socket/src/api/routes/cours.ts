@@ -6,6 +6,7 @@ import {
   importCoursValidator,
   versionParamsValidator,
 } from "@razzia/common/validators/cours"
+import { ordreDerouleValidator } from "@razzia/common/validators/deroule"
 import { quizSaisieSchema } from "@razzia/common/validators/quiz"
 import { apiFactory } from "@razzia/socket/api/factory"
 import { requireManager } from "@razzia/socket/api/middleware"
@@ -18,11 +19,12 @@ import {
   obtenirCours,
   utilisateurCourant,
 } from "@razzia/socket/services/cours"
+import { reorganiserDeroule } from "@razzia/socket/services/deroule"
 import { creerQuiz } from "@razzia/socket/services/quiz"
 
 const MULTIPART_OVERHEAD = 64 * 1024
 
-/** Routes du CU 1.2 (dossier de conception, Tableau 27). */
+/** Routes du CU 1.2 et du déroulé (dossier de conception, Tableau 27 ; SCRUM-17). */
 const routes = apiFactory
   .createApp()
   // En attendant le rôle ENSEIGNANT issu du LDAP (CU 1.1).
@@ -43,6 +45,19 @@ const routes = apiFactory
       c.json(
         await importerCours(c.req.valid("form"), await utilisateurCourant()),
         StatusCodes.CREATED,
+      ),
+  )
+  .put(
+    "/:idCours/deroule",
+    zValidator("param", coursParamsValidator, i18nHook),
+    zValidator("json", ordreDerouleValidator, i18nHook),
+    async (c) =>
+      c.json(
+        await reorganiserDeroule(
+          c.req.valid("param").idCours,
+          await utilisateurCourant(),
+          c.req.valid("json").ordre,
+        ),
       ),
   )
   .post(

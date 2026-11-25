@@ -260,7 +260,8 @@ export const quizSaisieSchema = z.object({
     .trim()
     .min(1, "errors:quiz.titreVide")
     .max(TITRE_QUIZ_MAX, "errors:quiz.titreTropLong"),
-  apresPage: z.number().int().min(1, "errors:quiz.positionInvalide"),
+  // 0 : avant la première page, possible depuis le glisser-déposer du déroulé (SCRUM-17).
+  apresPage: z.number().int().min(0, "errors:quiz.positionInvalide"),
   rang: z.number().int().min(0),
   modeAffichage: z.enum(["STATISTIQUES", "CLASSEMENT", "AUCUN"]),
   afficherLeaderboard: z.boolean(),

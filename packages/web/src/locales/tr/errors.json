@@ -1,4 +1,12 @@
 {
+  "deroule": {
+    "typeInconnu": "Unknown outline item: only pages and quizzes can be moved",
+    "pageInvalide": "This page does not exist in the course PDF",
+    "pageManquante": "Each PDF page must appear once in the outline",
+    "doublon": "An item appears twice in the outline",
+    "quizInconnu": "This quiz does not belong to the course",
+    "quizManquant": "A quiz of the course is missing from the outline"
+  },
   "seance": {
     "questionOuverte": "A question of this quiz is open in a session: try again when it ends",
     "quizDejaJoue": "This quiz has already been played: its questions can no longer be changed",
