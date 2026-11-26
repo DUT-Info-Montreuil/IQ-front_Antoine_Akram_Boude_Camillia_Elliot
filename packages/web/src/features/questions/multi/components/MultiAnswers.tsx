@@ -5,86 +5,79 @@ import type { AnswerComponentProps } from "@razzia/web/features/questions/types"
 import Button from "@razzia/web/components/Button"
 import AnswerButton from "@razzia/web/features/game/components/AnswerButton"
 import {
-  ANSWERS_COLORS,
-  ANSWERS_LABELS,
+    ANSWERS_COLORS,
+    ANSWERS_LABELS,
 } from "@razzia/web/features/game/utils/constants"
 
 const MultiAnswers = ({
-                        answers,
-                        correctAnswersCount = 1,
-                        onSubmit,
-                        readOnly,
-                        fill,
+                          answers,
+                          onSubmit,
+                          readOnly,
+                          fill,
                       }: AnswerComponentProps) => {
-  const [selected, setSelected] = useState<number[]>([])
-  const { t } = useTranslation()
+    const [selected, setSelected] = useState<number[]>([])
+    const { t } = useTranslation()
 
-  const handleSubmit = () => onSubmit(selected)
+    const handleSubmit = () => onSubmit(selected)
 
-  const toggle = (key: number) => {
-    setSelected((prev) =>
-        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    )
-  }
-
-  const handleAnswerClick = (key: number) => {
-    // Une seule bonne réponse : validation immédiate.
-    if (correctAnswersCount <= 1) {
-      onSubmit([key])
-      return
+    const toggle = (key: number) => {
+        setSelected((prev) =>
+            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+        )
     }
 
-    // Plusieurs bonnes réponses : sélection multiple.
-    toggle(key)
-  }
+    const handleAnswerClick = (key: number) => {
+        // Une question de type choix multiples permet de cocher plusieurs réponses.
+        toggle(key)
+    }
 
-  return (
-      <div
-          className={clsx(
-              "mx-auto mb-4 flex w-full max-w-7xl flex-col gap-2 px-2",
-              {
-                "flex-1": fill,
-              },
-          )}
-      >
+    return (
         <div
             className={clsx(
-                "grid gap-1 text-lg font-bold text-white md:text-xl",
-                fill
-                    ? "flex-1 auto-rows-fr grid-cols-1 sm:grid-cols-2"
-                    : "grid-cols-2",
+                "mx-auto mb-4 flex w-full max-w-7xl flex-col gap-2 px-2",
+                {
+                    "flex-1": fill,
+                },
             )}
         >
-          {answers.map((answer, key) => {
-            const isSelected = selected.includes(key)
-
-            return (
-                <AnswerButton
-                    key={key}
-                    className={ANSWERS_COLORS[key]}
-                    label={ANSWERS_LABELS[key]}
-                    onClick={() => handleAnswerClick(key)}
-                    selected={readOnly ? undefined : isSelected}
-                    disabled={readOnly}
-                    large={fill}
-                >
-                  {answer}
-                </AnswerButton>
-            )
-          })}
-        </div>
-
-        {!readOnly && correctAnswersCount > 1 && (
-            <Button
-                onClick={handleSubmit}
-                disabled={selected.length === 0}
-                className="mx-auto w-full max-w-xs"
+            <div
+                className={clsx(
+                    "grid gap-1 text-lg font-bold text-white md:text-xl",
+                    fill
+                        ? "flex-1 auto-rows-fr grid-cols-1 sm:grid-cols-2"
+                        : "grid-cols-2",
+                )}
             >
-              {t("game:confirm")}
-            </Button>
-        )}
-      </div>
-  )
+                {answers.map((answer, key) => {
+                    const isSelected = selected.includes(key)
+
+                    return (
+                        <AnswerButton
+                            key={key}
+                            className={ANSWERS_COLORS[key]}
+                            label={ANSWERS_LABELS[key]}
+                            onClick={() => handleAnswerClick(key)}
+                            selected={readOnly ? undefined : isSelected}
+                            disabled={readOnly}
+                            large={fill}
+                        >
+                            {answer}
+                        </AnswerButton>
+                    )
+                })}
+            </div>
+
+            {!readOnly && (
+                <Button
+                    onClick={handleSubmit}
+                    disabled={selected.length === 0}
+                    className="mx-auto w-full max-w-xs"
+                >
+                    {t("game:confirm")}
+                </Button>
+            )}
+        </div>
+    )
 }
 
 export default MultiAnswers

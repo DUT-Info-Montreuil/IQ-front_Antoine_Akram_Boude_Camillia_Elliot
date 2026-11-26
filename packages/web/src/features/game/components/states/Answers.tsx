@@ -34,7 +34,6 @@ const Answers = ({
                    data: {
                      question,
                      answers,
-                     correctAnswersCount,
                      media,
                      time,
                      totalPlayer,
@@ -190,7 +189,6 @@ const Answers = ({
 
           <AnswerComponent
               answers={answers}
-              correctAnswersCount={correctAnswersCount}
               options={options}
               onSubmit={handleSubmit}
               readOnly={!player || envoyee}
