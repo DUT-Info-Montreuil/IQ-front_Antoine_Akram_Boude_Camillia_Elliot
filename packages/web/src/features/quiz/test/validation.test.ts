@@ -194,6 +194,52 @@ describe("réponse libre : correction", () => {
   })
 })
 
+describe("validerQuiz — barème QCM", () => {
+  it("refuse des bonnes réponses dont la somme dépasse le maximum", () => {
+    const qcm = question({
+      pointsMax: 10,
+      propositions: [
+        { libelle: "A", estCorrecte: true, points: 10 },
+        { libelle: "B", estCorrecte: true, points: 10 },
+      ],
+    })
+
+    expect(cles(quizAvec(qcm))).toEqual([
+      "errors:quiz.sommePointsSuperieureMax",
+    ])
+  })
+
+  it("refuse en français un champ de points vidé", () => {
+    const qcm = question({
+      propositions: [
+        { libelle: "A", estCorrecte: true, points: Number.NaN },
+        { libelle: "B", estCorrecte: false, points: 0 },
+      ],
+    })
+
+    expect(cles(quizAvec(qcm))).toContain("errors:quiz.pointsEntiers")
+    expect(cles(quizAvec(qcm)).every((cle) => cle.startsWith("errors:"))).toBe(
+      true,
+    )
+  })
+
+  it("accepte le barème réparti par défaut", () => {
+    const qcm = question({
+      pointsMax: 10,
+      propositions: repartirPoints(
+        [
+          { libelle: "A", estCorrecte: true, points: 0 },
+          { libelle: "B", estCorrecte: true, points: 0 },
+          { libelle: "C", estCorrecte: true, points: 0 },
+        ],
+        10,
+      ),
+    })
+
+    expect(validerQuiz(quizAvec(qcm))).toEqual([])
+  })
+})
+
 describe("saisie", () => {
   it("répartit les points QCM sur les bonnes réponses", () => {
     const propositions = repartirPoints(

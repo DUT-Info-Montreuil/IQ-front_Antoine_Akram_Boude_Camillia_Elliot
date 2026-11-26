@@ -9,6 +9,7 @@ import {
   QUIZZ_MODES,
   QUESTION_TYPES,
 } from "@razzia/common/constants"
+import { repartirPoints } from "@razzia/common/questions/points"
 import FieldError from "@razzia/web/components/forms/FieldError"
 import {
   ANSWERS_COLORS,
@@ -32,7 +33,12 @@ const QuestionEditorAnswers = () => {
     questionPath,
   } = useQuizzEditor()
 
-  const { control } = useFormContext<QuizzFormValues>()
+  const { control, formState, getFieldState } =
+    useFormContext<QuizzFormValues>()
+
+  // Erreur sur le barème entier, par exemple une somme au-dessus du maximum.
+  const pointsMessage = getFieldState(questionPath("answerPoints"), formState)
+    .error?.message
   const { t } = useTranslation()
 
   const questionType = currentQuestion.type
@@ -70,27 +76,14 @@ const QuestionEditorAnswers = () => {
 
     const solutions = nextSolutions.length > 0 ? nextSolutions : [0]
 
-    const previousPoints = currentQuestion.answers.map((_, index) =>
-        currentQuestion.solutions?.includes(index)
-            ? Math.max(
-                1,
-                currentQuestion.answerPoints?.[index] ?? getDefaultPoints(
-                    currentQuestion.maxPoints ?? MAX_POINTS,
-                    currentQuestion.solutions.length,
-                ),
-            )
-            : 0,
-    )
-
-    const answerPoints = previousPoints.slice(0, nextAnswers.length)
-
-    if (nextSolutions.length === 0) {
-      answerPoints[0] = Math.max(1, currentQuestion.maxPoints ?? MAX_POINTS)
-    }
-
+    // Les bonnes réponses ont pu changer : le maximum est réparti à nouveau.
     updateQuestion(currentIndex, {
       answers: nextAnswers,
-      answerPoints,
+      answerPoints: repartirPoints(
+        nextAnswers.length,
+        solutions,
+        currentQuestion.maxPoints ?? MAX_POINTS,
+      ),
       solutions,
     })
   }
@@ -231,6 +224,11 @@ const QuestionEditorAnswers = () => {
             )
           })}
         </div>
+
+        <FieldError
+            errors={pointsMessage ? [{ type: "custom", message: pointsMessage }] : []}
+            pill
+        />
       </div>
   )
 }

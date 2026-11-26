@@ -23,10 +23,11 @@ export const refineChoiceQuestion: QuestionRefinement = (
   }
 
   const hasInvalidSolution = solutions?.some(
-    (solution) => !Number.isInteger(solution) || solution < 0,
+    (solution) =>
+      !Number.isInteger(solution) || solution < 0 || solution >= answers.length,
   )
 
   if (hasInvalidSolution) {
-    addIssue(["solutions"], "errors:quizz.noSolution")
+    addIssue(["solutions"], "errors:quizz.invalidSolution")
   }
 }

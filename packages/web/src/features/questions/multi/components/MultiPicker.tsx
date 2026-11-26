@@ -2,6 +2,7 @@ import clsx from "clsx"
 import { Check } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { MAX_POINTS, QUIZZ_MODES } from "@razzia/common/constants"
+import { repartirPoints } from "@razzia/common/questions/points"
 import type { SolutionPickerProps } from "@razzia/web/features/questions/types"
 import { ANSWERS_LABELS } from "@razzia/web/features/game/utils/constants"
 import { useQuizzEditor } from "@razzia/web/features/quizz/contexts/quizz-editor-context"
@@ -23,26 +24,14 @@ const MultiSolutionPicker = ({ index, isSelected }: SolutionPickerProps) => {
         ? current.filter((solution) => solution !== index)
         : [...current, index]
 
-    const answerPoints = currentQuestion.answers.map((_, answerIndex) => {
-      if (!nextSolutions.includes(answerIndex)) return 0
-
-      const currentPoints = currentQuestion.answerPoints?.[answerIndex] ?? 0
-
-      if (answerIndex === index && !isCurrentlySelected) {
-        return Math.max(
-            1,
-            currentPoints || Math.floor(
-                (currentQuestion.maxPoints ?? MAX_POINTS) / nextSolutions.length,
-            ),
-        )
-      }
-
-      return Math.max(1, currentPoints)
-    })
-
+    // Le maximum est réparti à nouveau, pour que la somme ne le dépasse pas.
     updateQuestion(currentIndex, {
       solutions: nextSolutions,
-      answerPoints,
+      answerPoints: repartirPoints(
+        currentQuestion.answers.length,
+        nextSolutions,
+        currentQuestion.maxPoints ?? MAX_POINTS,
+      ),
     })
   }
 

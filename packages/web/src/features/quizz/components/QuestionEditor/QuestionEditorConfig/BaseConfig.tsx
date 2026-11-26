@@ -5,6 +5,7 @@ import {
   NO_TIME_LIMIT,
   QUIZZ_MODES,
 } from "@razzia/common/constants"
+import { repartirPoints } from "@razzia/common/questions/points"
 import Switch from "@razzia/web/components/Switch"
 import ConfigField from "@razzia/web/features/quizz/components/QuestionEditor/QuestionEditorConfig/ConfigField"
 import ConfigNumberInput from "@razzia/web/features/quizz/components/QuestionEditor/QuestionEditorConfig/ConfigNumberInput"
@@ -23,6 +24,21 @@ const BaseConfig = () => {
   const handleToggleTimeLimit = (checked: boolean) => {
     updateQuestion(currentIndex, {
       time: checked ? DEFAULT_TIME : NO_TIME_LIMIT,
+    })
+  }
+
+  // Un nouveau maximum est réparti entre les bonnes réponses du barème.
+  const handleMaxPointsChange = (maxPoints: number) => {
+    if (!currentQuestion.answerPoints) {
+      return
+    }
+
+    updateQuestion(currentIndex, {
+      answerPoints: repartirPoints(
+        currentQuestion.answers.length,
+        currentQuestion.solutions ?? [],
+        maxPoints,
+      ),
     })
   }
 
@@ -47,6 +63,7 @@ const BaseConfig = () => {
                     label={t("quizz:question.config.maxPoints")}
                     fallback={MAX_POINTS}
                     min={0}
+                    onValueChange={handleMaxPointsChange}
                 />
                 <ConfigField.Description>
                   {t("quizz:question.config.maxPointsHint")}

@@ -85,8 +85,11 @@
     "estimationStepInvalid": "Krok musi być większy od 0",
     "estimationMarginNegative": "Margines nie może być ujemny",
     "estimationInvalidOptions": "Brak ustawień szacowania lub są one nieprawidłowe",
+    "answerPointsLength": "Each answer must have a number of points",
+    "invalidSolution": "A correct answer points to an answer that does not exist",
     "correctAnswerNoPoints": "A correct answer must be worth at least 1 point",
-    "wrongAnswerWithPoints": "A wrong answer must be worth 0 points"
+    "wrongAnswerWithPoints": "A wrong answer must be worth 0 points",
+    "pointsAboveMax": "The points of the correct answers exceed the question maximum"
   },
   "result": {
     "notFound": "Nie znaleziono wyniku"
@@ -132,6 +135,7 @@
     "pointsEntiers": "Points must be a whole number",
     "pointsNegatifs": "Points cannot be negative",
     "pointsSuperieursMax": "Points exceed the question maximum",
+    "sommePointsSuperieureMax": "The points of the right answers add up to more than the question maximum",
     "introuvable": "Quiz not found",
     "positionInvalide": "This page does not exist in the course",
     "invalide": "The quiz has input errors",

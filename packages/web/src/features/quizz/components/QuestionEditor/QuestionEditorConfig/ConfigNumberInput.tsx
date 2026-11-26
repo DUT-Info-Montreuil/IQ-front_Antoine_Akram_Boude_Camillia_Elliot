@@ -18,9 +18,19 @@ interface Props {
   max?: number
   id?: string
   label?: string
+  /** Appelé après chaque nouvelle valeur valide du champ. */
+  onValueChange?: (_value: number) => void
 }
 
-const ConfigNumberInput = ({ name, fallback, min, max, id, label }: Props) => {
+const ConfigNumberInput = ({
+  name,
+  fallback,
+  min,
+  max,
+  id,
+  label,
+  onValueChange,
+}: Props) => {
   const { questionPath } = useQuizzEditor()
   const { field, fieldState } = useController<QuizzFormValues, NumberFieldPath>(
     { name: questionPath(name) },
@@ -37,7 +47,10 @@ const ConfigNumberInput = ({ name, fallback, min, max, id, label }: Props) => {
       return
     }
 
-    field.onChange(Math.min(max ?? Infinity, Math.max(min ?? -Infinity, num)))
+    const next = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, num))
+
+    field.onChange(next)
+    onValueChange?.(next)
   }
 
   const handleBlur = () => {

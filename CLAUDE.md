@@ -49,6 +49,4 @@ Connexion gestionnaire : `/manager` avec le mot de passe du `.env`. Un étudiant
 
 ## Problèmes connus (hors de notre périmètre)
 
-- `config/quizz/example.json` est invalide pour le validateur QCM de SCRUM-13. Crée un quiz QCM local (dans `config/`, ignoré par git) pour tester.
-- `locales.test.ts > fr has no unknown key` échoue sur `dev` (`quizz:question.answerPoints`).
 - Le moteur Razzia ne joue que les QCM. Les questions RELIER et LIBRE attendent le back du lot 2.
