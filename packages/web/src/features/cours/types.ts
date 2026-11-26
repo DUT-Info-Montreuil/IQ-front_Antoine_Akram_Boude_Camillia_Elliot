@@ -37,8 +37,8 @@ export interface CoursResume {
 }
 
 export type ElementOrdre =
-    | { type: "PAGE"; numeroPdf: number }
-    | { type: "QUIZ"; id: number }
+  | { type: "PAGE"; numeroPdf: number }
+  | { type: "QUIZ"; id: number }
 
 export interface CoursDetail extends CoursResume {
   versions: VersionPdf[]

@@ -1,5 +1,9 @@
 import { StatusCodes } from "http-status-codes"
-import type { CoursDetail, CoursSource, ElementOrdre } from "@razzia/web/features/cours/types"
+import type {
+  CoursDetail,
+  CoursSource,
+  ElementOrdre,
+} from "@razzia/web/features/cours/types"
 import type { Quiz } from "@razzia/web/features/quiz/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { analyserPdf } from "@razzia/web/features/cours/pdf"
@@ -41,7 +45,7 @@ const PROPRIETAIRE_MOCK = {
 let connexion: Promise<IDBDatabase> | null = null
 
 const erreurBase = (error: DOMException | null) =>
-    error ?? new Error("IndexedDB indisponible")
+  error ?? new Error("IndexedDB indisponible")
 
 const ouvrirBase = () => {
   connexion ??= new Promise((resolve, reject) => {
@@ -71,9 +75,9 @@ const ouvrirBase = () => {
 }
 
 export const executer = async <T>(
-    stores: string[],
-    mode: IDBTransactionMode,
-    action: (tx: IDBTransaction) => IDBRequest<T> | undefined,
+  stores: string[],
+  mode: IDBTransactionMode,
+  action: (tx: IDBTransaction) => IDBRequest<T> | undefined,
 ) => {
   const base = await ouvrirBase()
 
@@ -90,24 +94,24 @@ export const executer = async <T>(
 const cleFichier = (idCours: number, numero: number) => `${idCours}/v${numero}`
 
 export const patienter = () =>
-    new Promise((resolve) => {
-      setTimeout(resolve, LATENCE_MS)
-    })
+  new Promise((resolve) => {
+    setTimeout(resolve, LATENCE_MS)
+  })
 
 const erreur = (status: StatusCodes) =>
-    new ApiError(status, cleErreurCours(status, "errors:cours.importEchoue"))
+  new ApiError(status, cleErreurCours(status, "errors:cours.importEchoue"))
 
 const tousLesCours = () =>
-    executer<CoursDetail[]>([STORE_COURS], "readonly", (tx) =>
-        tx.objectStore(STORE_COURS).getAll(),
-    )
+  executer<CoursDetail[]>([STORE_COURS], "readonly", (tx) =>
+    tx.objectStore(STORE_COURS).getAll(),
+  )
 
 const resume = ({
-                  versions: _versions,
-                  deroule: _deroule,
-                  misDeCote: _misDeCote,
-                  ...cours
-                }: CoursDetail) => cours
+  versions: _versions,
+  deroule: _deroule,
+  misDeCote: _misDeCote,
+  ...cours
+}: CoursDetail) => cours
 
 export const coursMock: CoursSource = {
   lister: async () => {
@@ -115,16 +119,16 @@ export const coursMock: CoursSource = {
     const cours = await tousLesCours()
 
     return cours
-        .map(resume)
-        .sort((a, b) => b.dateModification.localeCompare(a.dateModification))
+      .map(resume)
+      .sort((a, b) => b.dateModification.localeCompare(a.dateModification))
   },
 
   obtenir: async (idCours) => {
     await patienter()
     const cours = await executer<CoursDetail | undefined>(
-        [STORE_COURS],
-        "readonly",
-        (tx) => tx.objectStore(STORE_COURS).get(idCours),
+      [STORE_COURS],
+      "readonly",
+      (tx) => tx.objectStore(STORE_COURS).get(idCours),
     )
 
     if (!cours) {
@@ -145,9 +149,9 @@ export const coursMock: CoursSource = {
 
     if (!analyse.ok) {
       throw erreur(
-          analyse.erreur === "errors:cours.pasUnPdf"
-              ? StatusCodes.BAD_REQUEST
-              : StatusCodes.UNPROCESSABLE_ENTITY,
+        analyse.erreur === "errors:cours.pasUnPdf"
+          ? StatusCodes.BAD_REQUEST
+          : StatusCodes.UNPROCESSABLE_ENTITY,
       )
     }
 
@@ -184,9 +188,9 @@ export const coursMock: CoursSource = {
 
   lireFichier: async (idCours, numero) => {
     const fichier = await executer<Blob | undefined>(
-        [STORE_FICHIERS],
-        "readonly",
-        (tx) => tx.objectStore(STORE_FICHIERS).get(cleFichier(idCours, numero)),
+      [STORE_FICHIERS],
+      "readonly",
+      (tx) => tx.objectStore(STORE_FICHIERS).get(cleFichier(idCours, numero)),
     )
 
     if (!fichier) {
@@ -197,28 +201,31 @@ export const coursMock: CoursSource = {
   },
 }
 
-
 /** Persiste aussi l'ordre global dans IndexedDB lorsque le front tourne en mock. */
 export const reorganiserDerouleMock = async (
-    idCours: number,
-    ordre: ElementOrdre[],
+  idCours: number,
+  ordre: ElementOrdre[],
 ) => {
   await patienter()
 
   const cours = await executer<CoursDetail | undefined>(
-      [STORE_COURS],
-      "readonly",
-      (tx) => tx.objectStore(STORE_COURS).get(idCours),
+    [STORE_COURS],
+    "readonly",
+    (tx) => tx.objectStore(STORE_COURS).get(idCours),
   )
 
-  if (!cours) throw erreur(StatusCodes.NOT_FOUND)
+  if (!cours) {
+    throw erreur(StatusCodes.NOT_FOUND)
+  }
 
   const quizParId = new Map(
-      (await executer<Quiz[]>([STORE_QUIZ], "readonly", (tx) =>
-          tx.objectStore(STORE_QUIZ).getAll(),
-      ))
-          .filter((quiz) => quiz.idCours === idCours)
-          .map((quiz) => [quiz.id, quiz]),
+    (
+      await executer<Quiz[]>([STORE_QUIZ], "readonly", (tx) =>
+        tx.objectStore(STORE_QUIZ).getAll(),
+      )
+    )
+      .filter((quiz) => quiz.idCours === idCours)
+      .map((quiz) => [quiz.id, quiz]),
   )
 
   let apresPage = 0
@@ -227,22 +234,29 @@ export const reorganiserDerouleMock = async (
     if (element.type === "PAGE") {
       apresPage = element.numeroPdf
       rang = 0
+
       continue
     }
 
     const quiz = quizParId.get(element.id)
-    if (!quiz) continue
+
+    if (!quiz) {
+      continue
+    }
     quiz.apresPage = apresPage
     quiz.rang = rang
     rang += 1
   }
 
   const deroule = cours.deroule.map((element) => {
-    if (element.type !== "QUIZ") return element
+    if (element.type !== "QUIZ") {
+      return element
+    }
     const quiz = quizParId.get(element.id)
+
     return quiz
-        ? { ...element, apresPage: quiz.apresPage, rang: quiz.rang }
-        : element
+      ? { ...element, apresPage: quiz.apresPage, rang: quiz.rang }
+      : element
   })
 
   const coursMisAJour: CoursDetail = {
@@ -254,8 +268,11 @@ export const reorganiserDerouleMock = async (
 
   await executer([STORE_COURS, STORE_QUIZ], "readwrite", (tx) => {
     const quizStore = tx.objectStore(STORE_QUIZ)
-    for (const quiz of quizParId.values()) quizStore.put(quiz)
+    for (const quiz of quizParId.values()) {
+      quizStore.put(quiz)
+    }
     tx.objectStore(STORE_COURS).put(coursMisAJour)
+
     return undefined
   })
 
