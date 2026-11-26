@@ -41,7 +41,8 @@ const PDF = Buffer.from(
 const OPTIONS = {
   delaiLecture: 3,
   penalite: 0,
-  modeScore: "STRICT",
+  // Points partiels : bonnes réponses cochées moins les mauvaises.
+  modeScore: "EQUILIBRE",
   categorie: "",
   note: "",
   media: null,
