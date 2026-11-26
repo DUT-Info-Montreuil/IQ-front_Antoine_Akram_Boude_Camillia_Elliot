@@ -2,8 +2,12 @@ import { StatusCodes } from "http-status-codes"
 
 type DomainErrorStatus =
   | StatusCodes.BAD_REQUEST
+  | StatusCodes.FORBIDDEN
   | StatusCodes.NOT_FOUND
+  | StatusCodes.CONFLICT
+  | StatusCodes.REQUEST_TOO_LONG
   | StatusCodes.UNSUPPORTED_MEDIA_TYPE
+  | StatusCodes.UNPROCESSABLE_ENTITY
   | StatusCodes.INTERNAL_SERVER_ERROR
 
 export class DomainError extends Error {
@@ -22,6 +26,18 @@ export const notFound = (key: string) =>
 
 export const invalidInput = (key: string) =>
   new DomainError(key, StatusCodes.BAD_REQUEST)
+
+export const forbidden = (key: string) =>
+  new DomainError(key, StatusCodes.FORBIDDEN)
+
+export const conflict = (key: string) =>
+  new DomainError(key, StatusCodes.CONFLICT)
+
+export const tooLarge = (key: string) =>
+  new DomainError(key, StatusCodes.REQUEST_TOO_LONG)
+
+export const unprocessable = (key: string) =>
+  new DomainError(key, StatusCodes.UNPROCESSABLE_ENTITY)
 
 export const unsupportedMediaType = (key: string) =>
   new DomainError(key, StatusCodes.UNSUPPORTED_MEDIA_TYPE)

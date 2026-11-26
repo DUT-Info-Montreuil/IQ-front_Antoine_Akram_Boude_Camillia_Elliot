@@ -1,171 +1,202 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  createContext,
-  useContext,
-  useState,
-  type PropsWithChildren,
+    createContext,
+    useContext,
+    useState,
+    type PropsWithChildren,
 } from "react"
 import { flushSync } from "react-dom"
 import {
-  FormProvider,
-  useFieldArray,
-  useForm,
-  useWatch,
-  type FieldPath,
+    FormProvider,
+    useFieldArray,
+    useForm,
+    useWatch,
+    type FieldPath,
 } from "react-hook-form"
 import type {
-  Question,
-  QuizzMode,
-  QuizzWithId,
+    Question,
+    QuizzMode,
+    QuizzWithId,
 } from "@razzia/common/types/game"
-import { QUESTION_TYPES, QUIZZ_MODES } from "@razzia/common/constants"
+import { MAX_POINTS, QUESTION_TYPES, QUIZZ_MODES } from "@razzia/common/constants"
 import {
-  quizzValidator,
-  type QuizzValidated,
+    quizzValidator,
+    type QuizzValidated,
 } from "@razzia/common/validators/quizz"
 
 export interface QuizzFormValues {
-  gameMode: QuizzMode
-  subject: string
-  questions: Question[]
+    gameMode: QuizzMode
+    subject: string
+    questions: Question[]
 }
 
 interface QuizzEditorContextType {
-  quizzId: string | null
-  gameMode: QuizzMode
-  questions: Question[]
-  questionIds: string[]
-  currentIndex: number
-  currentQuestion: Question
-  currentQuestionId: string
-  isRemoving: boolean
-  setCurrentIndex: (_index: number) => void
-  addQuestion: () => void
-  removeQuestion: (_index: number) => void
-  reorderQuestions: (_from: number, _to: number) => void
-  updateQuestion: (_index: number, _updates: Partial<Question>) => void
-  questionPath: <K extends FieldPath<Question>>(
-    _field: K,
-  ) => `questions.${number}.${K}`
+    quizzId: string | null
+    gameMode: QuizzMode
+    questions: Question[]
+    questionIds: string[]
+    currentIndex: number
+    currentQuestion: Question
+    currentQuestionId: string
+    isRemoving: boolean
+    setCurrentIndex: (_index: number) => void
+    addQuestion: () => void
+    removeQuestion: (_index: number) => void
+    reorderQuestions: (_from: number, _to: number) => void
+    updateQuestion: (_index: number, _updates: Partial<Question>) => void
+    questionPath: <K extends FieldPath<Question>>(
+        _field: K,
+    ) => `questions.${number}.${K}`
 }
 
 const QuizzEditorContext = createContext<QuizzEditorContextType | null>(null)
 
 const defaultQuestion = (): Question => ({
-  type: QUESTION_TYPES.SINGLE,
-  question: "",
-  answers: ["", ""],
-  solutions: [0],
-  cooldown: 5,
-  time: 20,
+    type: QUESTION_TYPES.MULTI,
+    question: "",
+    answers: ["", ""],
+    answerPoints: [MAX_POINTS, 0],
+    solutions: [0],
+    cooldown: 5,
+    time: 20,
 })
 
 const clampIndex = (index: number, length: number) =>
-  Math.max(0, Math.min(index, length - 1))
+    Math.max(0, Math.min(index, length - 1))
 
 type QuizzEditorProviderProps = PropsWithChildren<{
-  initialData?: QuizzWithId
+    initialData?: QuizzWithId
 }>
 
 export const QuizzEditorProvider = ({
-  children,
-  initialData,
-}: QuizzEditorProviderProps) => {
-  const form = useForm<QuizzFormValues, unknown, QuizzValidated>({
-    resolver: zodResolver(quizzValidator),
-    defaultValues: {
-      gameMode: initialData?.gameMode ?? QUIZZ_MODES.QUIZ,
-      subject: initialData?.subject ?? "Untitled Quizz",
-      questions: initialData ? initialData.questions : [defaultQuestion()],
-    },
-  })
+                                        children,
+                                        initialData,
+                                    }: QuizzEditorProviderProps) => {
+    const form = useForm<QuizzFormValues, unknown, QuizzValidated>({
+        resolver: zodResolver(quizzValidator),
+        defaultValues: {
+            gameMode: initialData?.gameMode ?? QUIZZ_MODES.QUIZ,
+            subject: initialData?.subject ?? "Untitled Quizz",
+            questions: initialData
+                ? initialData.questions.map((question) => ({
+                    ...question,
 
-  const { control, getValues, setValue, formState } = form
-  const { fields, append, remove, move } = useFieldArray({
-    control,
-    name: "questions",
-  })
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [removingFrom, setRemovingFrom] = useState<Question[] | null>(null)
+                    // Les anciennes questions à choix unique deviennent des QCM.
+                    type:
+                        question.type === QUESTION_TYPES.SINGLE
+                            ? QUESTION_TYPES.MULTI
+                            : question.type,
 
-  const questions = useWatch({ control, name: "questions" })
-  const gameMode = useWatch({ control, name: "gameMode" })
-  const safeIndex = clampIndex(currentIndex, questions.length)
-  const currentQuestion = questions[safeIndex]
-  const questionIds = fields.map((field) => field.id)
+                    // Une mauvaise réponse ne conserve jamais de points.
+                    // Une bonne réponse conserve au minimum 1 point.
+                    answerPoints: question.answers.map((_, index) => {
+                        const isCorrect = question.solutions?.includes(index) ?? false
+                        const existingPoints = question.answerPoints?.[index]
 
-  const addQuestion = () => {
-    const category = questions.at(-1)?.category
+                        if (!isCorrect) return 0
 
-    append({ ...defaultQuestion(), ...(category ? { category } : {}) })
-    setCurrentIndex(questions.length)
-  }
-
-  const removeQuestion = (index: number) => {
-    flushSync(() => setRemovingFrom(questions))
-    remove(index)
-
-    setCurrentIndex((current) => {
-      if (current < index) {
-        return current
-      }
-
-      if (current > index) {
-        return current - 1
-      }
-
-      return clampIndex(current, questions.length - 1)
+                        return Math.max(
+                            1,
+                            existingPoints ?? Math.floor(
+                                (question.maxPoints ?? MAX_POINTS) /
+                                Math.max(question.solutions?.length ?? 1, 1),
+                            ),
+                        )
+                    }),
+                }))
+                : [defaultQuestion()],
+        },
     })
-  }
 
-  const reorderQuestions = (from: number, to: number) => {
-    move(from, to)
-    setCurrentIndex(to)
-  }
+    const { control, getValues, setValue, formState } = form
 
-  const questionPath = <K extends FieldPath<Question>>(field: K) =>
-    `questions.${currentIndex}.${field}` as const
+    const { fields, append, remove, move } = useFieldArray({
+        control,
+        name: "questions",
+    })
 
-  const updateQuestion = (index: number, updates: Partial<Question>) => {
-    setValue(
-      `questions.${index}`,
-      { ...getValues(`questions.${index}`), ...updates },
-      { shouldValidate: formState.isSubmitted, shouldDirty: true },
+    const [currentIndex, setCurrentIndex] = useState(0)
+    const [removingFrom, setRemovingFrom] = useState<Question[] | null>(null)
+
+    const questions = useWatch({ control, name: "questions" })
+    const gameMode = useWatch({ control, name: "gameMode" })
+
+    const safeIndex = clampIndex(currentIndex, questions.length)
+    const currentQuestion = questions[safeIndex]
+    const questionIds = fields.map((field) => field.id)
+
+    const addQuestion = () => {
+        const category = questions.at(-1)?.category
+
+        append({ ...defaultQuestion(), ...(category ? { category } : {}) })
+        setCurrentIndex(questions.length)
+    }
+
+    const removeQuestion = (index: number) => {
+        flushSync(() => setRemovingFrom(questions))
+        remove(index)
+
+        setCurrentIndex((current) => {
+            if (current < index) {
+                return current
+            }
+
+            if (current > index) {
+                return current - 1
+            }
+
+            return clampIndex(current, questions.length - 1)
+        })
+    }
+
+    const reorderQuestions = (from: number, to: number) => {
+        move(from, to)
+        setCurrentIndex(to)
+    }
+
+    const questionPath = <K extends FieldPath<Question>>(field: K) =>
+        `questions.${currentIndex}.${field}` as const
+
+    const updateQuestion = (index: number, updates: Partial<Question>) => {
+        setValue(
+            `questions.${index}`,
+            { ...getValues(`questions.${index}`), ...updates },
+            { shouldValidate: formState.isSubmitted, shouldDirty: true },
+        )
+    }
+
+    return (
+        <FormProvider {...form}>
+            <QuizzEditorContext.Provider
+                value={{
+                    quizzId: initialData?.id ?? null,
+                    gameMode,
+                    questions,
+                    questionIds,
+                    currentIndex,
+                    currentQuestion,
+                    currentQuestionId: questionIds[safeIndex],
+                    isRemoving: removingFrom === questions,
+                    setCurrentIndex,
+                    addQuestion,
+                    removeQuestion,
+                    reorderQuestions,
+                    updateQuestion,
+                    questionPath,
+                }}
+            >
+                {children}
+            </QuizzEditorContext.Provider>
+        </FormProvider>
     )
-  }
-
-  return (
-    <FormProvider {...form}>
-      <QuizzEditorContext.Provider
-        value={{
-          quizzId: initialData?.id ?? null,
-          gameMode,
-          questions,
-          questionIds,
-          currentIndex,
-          currentQuestion,
-          currentQuestionId: questionIds[safeIndex],
-          isRemoving: removingFrom === questions,
-          setCurrentIndex,
-          addQuestion,
-          removeQuestion,
-          reorderQuestions,
-          updateQuestion,
-          questionPath,
-        }}
-      >
-        {children}
-      </QuizzEditorContext.Provider>
-    </FormProvider>
-  )
 }
 
 export const useQuizzEditor = () => {
-  const ctx = useContext(QuizzEditorContext)
+    const ctx = useContext(QuizzEditorContext)
 
-  if (!ctx) {
-    throw new Error("useQuizzEditor must be used inside QuizzEditorProvider")
-  }
+    if (!ctx) {
+        throw new Error("useQuizzEditor must be used inside QuizzEditorProvider")
+    }
 
-  return ctx
+    return ctx
 }
