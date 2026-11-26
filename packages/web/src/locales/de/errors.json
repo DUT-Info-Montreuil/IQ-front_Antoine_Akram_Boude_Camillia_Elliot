@@ -84,7 +84,9 @@
     "estimationSolutionOutOfRange": "Die richtige Antwort muss zwischen Minimum und Maximum liegen",
     "estimationStepInvalid": "Die Schrittweite muss größer als 0 sein",
     "estimationMarginNegative": "Die Toleranz darf nicht negativ sein",
-    "estimationInvalidOptions": "Die Schätzungseinstellungen fehlen oder sind ungültig"
+    "estimationInvalidOptions": "Die Schätzungseinstellungen fehlen oder sind ungültig",
+    "correctAnswerNoPoints": "A correct answer must be worth at least 1 point",
+    "wrongAnswerWithPoints": "A wrong answer must be worth 0 points"
   },
   "result": {
     "notFound": "Ergebnis nicht gefunden"
