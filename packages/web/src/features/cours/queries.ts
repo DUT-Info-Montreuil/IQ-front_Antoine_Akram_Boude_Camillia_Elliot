@@ -1,7 +1,8 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { ImportCoursSaisie } from "@razzia/web/features/cours/types"
+import type { ElementOrdre, ImportCoursSaisie } from "@razzia/web/features/cours/types"
 import { coursHttp } from "@razzia/web/features/cours/api/http"
-import { coursMock } from "@razzia/web/features/cours/api/mock"
+import { coursMock, reorganiserDerouleMock } from "@razzia/web/features/cours/api/mock"
+import { reorganiserDeroule as reorganiserDerouleHttp } from "@razzia/web/features/cours/api/http"
 
 /** Vraies routes /api/cours par défaut ; VITE_API_MOCK=true repasse sur le mock IndexedDB (démo sans back). */
 export const API_COURS_MOCK = import.meta.env.VITE_API_MOCK === "true"
@@ -9,29 +10,36 @@ export const API_COURS_MOCK = import.meta.env.VITE_API_MOCK === "true"
 const source = API_COURS_MOCK ? coursMock : coursHttp
 
 export const coursKeys = {
-  all: ["cours"] as const,
-  detail: (idCours: number) => ["cours", idCours] as const,
-  fichier: (idCours: number, numero: number) =>
-    ["cours", idCours, "fichier", numero] as const,
+    all: ["cours"] as const,
+    detail: (idCours: number) => ["cours", idCours] as const,
+    fichier: (idCours: number, numero: number) =>
+        ["cours", idCours, "fichier", numero] as const,
 }
 
 export const coursListQuery = () =>
-  queryOptions({
-    queryKey: coursKeys.all,
-    queryFn: () => source.lister(),
-  })
+    queryOptions({
+        queryKey: coursKeys.all,
+        queryFn: () => source.lister(),
+    })
 
 export const coursQuery = (idCours: number) =>
-  queryOptions({
-    queryKey: coursKeys.detail(idCours),
-    queryFn: () => source.obtenir(idCours),
-  })
+    queryOptions({
+        queryKey: coursKeys.detail(idCours),
+        queryFn: () => source.obtenir(idCours),
+    })
 
 export const fichierCoursQuery = (idCours: number, numero: number) =>
-  queryOptions({
-    queryKey: coursKeys.fichier(idCours, numero),
-    queryFn: () => source.lireFichier(idCours, numero),
-    staleTime: Infinity,
-  })
+    queryOptions({
+        queryKey: coursKeys.fichier(idCours, numero),
+        queryFn: () => source.lireFichier(idCours, numero),
+        staleTime: Infinity,
+    })
 
 export const importerCours = (saisie: ImportCoursSaisie) => source.creer(saisie)
+
+
+/** Enregistre l'ordre du déroulé dans l'API réelle ou dans le mock IndexedDB. */
+export const reorganiserDeroule = (idCours: number, ordre: ElementOrdre[]) =>
+    API_COURS_MOCK
+        ? reorganiserDerouleMock(idCours, ordre)
+        : reorganiserDerouleHttp(idCours, ordre)

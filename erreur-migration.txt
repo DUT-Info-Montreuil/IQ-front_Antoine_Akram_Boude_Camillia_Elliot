@@ -1,0 +1,11 @@
+[WARN] Unsupported engine: wanted: {"node":"^26"} (current: {"node":"v24.11.1","pnpm":"11.28.7"})
+$ dotenv -e .env -- pnpm --filter socket db:migrate
+.                                        | [WARN] Unsupported engine: wanted: {"node":"^26"} (current: {"node":"v24.11.1","pnpm":"11.28.7"})
+$ drizzle-kit migrate
+No config path provided, using default 'drizzle.config.ts'
+Reading config file 'C:\Users\antoi.ANTOINE\OneDrive\Desktop\IQ_Antoine_Akram_Boude_Camillia_Elliot\packages\socket\drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣷] applying migrations...C:\Users\antoi.ANTOINE\OneDrive\Desktop\IQ_Antoine_Akram_Boude_Camillia_Elliot\packages\socket:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @razzia/socket@ db:migrate: `drizzle-kit migrate`
+Exit status 1
+[ELIFECYCLE] Command failed with exit code 1.
