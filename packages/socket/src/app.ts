@@ -11,7 +11,6 @@ import { EVENTS } from "@razzia/common/constants"
 import { clientEventValidators } from "@razzia/common/validators/socket"
 import { api } from "@razzia/socket/api"
 import { gameSocketHandlers } from "@razzia/socket/handlers/game"
-import { seanceSocketHandlers } from "@razzia/socket/handlers/seance"
 import { verifyToken } from "@razzia/socket/services/auth"
 import { DomainError } from "@razzia/socket/services/errors"
 import { setIo } from "@razzia/socket/services/io"
@@ -58,10 +57,7 @@ app.onError((error, c) => {
   )
 })
 
-const socketHandlers: SocketHandler[] = [
-  gameSocketHandlers,
-  seanceSocketHandlers,
-]
+const socketHandlers: SocketHandler[] = [gameSocketHandlers]
 
 const authError = (code: string, message: string) => {
   const error = new Error(message) as Error & { data: { code: string } }

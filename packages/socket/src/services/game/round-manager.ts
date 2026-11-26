@@ -113,11 +113,6 @@ export class RoundManager {
     return this.started
   }
 
-  // IQ : entre l'affichage de l'énoncé et la révélation de la réponse.
-  isQuestionOpen(): boolean {
-    return this.started && this.isAskingQuestion()
-  }
-
   private get question(): Question {
     return this.opts.quizz.questions[this.currentQuestion]
   }
@@ -323,11 +318,6 @@ export class RoundManager {
     this.opts.broadcast(STATUS.SELECT_ANSWER, {
       question: this.question.question,
       answers: this.question.answers,
-
-      correctAnswersCount: Math.max(
-          this.question.solutions?.length ?? 1,
-          1,
-      ),
       media: this.question.media,
       time: this.question.time,
       totalPlayer: this.opts.players.count(),

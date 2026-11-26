@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { BookOpen, LogOut } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import Card from "@razzia/web/components/Card"
@@ -57,13 +57,6 @@ const Configurations = () => {
           {t("manager:configurationsTitle")}
         </p>
         <div className="flex items-center gap-2">
-          <button
-            className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            onClick={() => navigate({ to: "/manager/cours" })}
-            title={t("manager:cours.mesCours")}
-          >
-            <BookOpen className="size-4" />
-          </button>
           <LanguageSwitcher />
           <button
             className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"

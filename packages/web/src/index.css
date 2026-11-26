@@ -20,25 +20,6 @@
 
   --font-display: "Rubik Variable", sans-serif;
 
-  /* Charte IQ (maquettes E1 à E10, mascotte Plume) */
-  --color-iq-foret: #1e3318;
-  --color-iq-foret-clair: #2a4320;
-  --color-iq-olive: #3f5f22;
-  --color-iq-olive-fonce: #2b4317;
-  --color-iq-mousse: #6e8b3d;
-  --color-iq-sauge: #b5cc7a;
-  --color-iq-citron: #c8dd8c;
-  --color-iq-creme: #f5f0de;
-  --color-iq-fond: #eeeadb;
-  --color-iq-champ: #f7f4ea;
-  --color-iq-bordure: #dcd9bf;
-  --color-iq-texte: #1e3318;
-  --color-iq-gris: #5f6355;
-  --color-iq-or: #e2b23a;
-  --color-iq-saumon: #e7a796;
-  --color-iq-ciel: #aac6d6;
-  --font-iq: "Montserrat Variable", sans-serif;
-
   --animate-fade: fade 150ms ease both;
 }
 

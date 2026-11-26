@@ -58,18 +58,10 @@ class Game {
     { name: Status; data: StatusDataMap[Status] }
   >()
 
-  // IQ : `inviteCode` impose le code de la séance, commun à tous ses quiz.
-  // Quatrième paramètre optionnel plutôt qu'un objet : les appels Razzia restent inchangés.
-  // oxlint-disable-next-line max-params
-  constructor(
-    io: Server,
-    managerClientId: string,
-    quizz: Quizz,
-    inviteCode: string = createInviteCode(),
-  ) {
+  constructor(io: Server, managerClientId: string, quizz: Quizz) {
     this.io = io
     this.gameId = uuid()
-    this.inviteCode = inviteCode
+    this.inviteCode = createInviteCode()
     this.gameMode = quizz.gameMode
     this._manager = {
       id: "",
@@ -119,11 +111,6 @@ class Game {
 
   get started(): boolean {
     return this.round.isStarted()
-  }
-
-  /** IQ : une question est affichée et pas encore corrigée. */
-  get questionOuverte(): boolean {
-    return this.round.isQuestionOpen()
   }
 
   get settings(): GameSettings {
