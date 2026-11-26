@@ -3,6 +3,7 @@ import { EVENTS } from "@razzia/common/constants"
 import { verifyJoinTicket } from "@razzia/socket/services/auth"
 import Game from "@razzia/socket/services/game"
 import Registry from "@razzia/socket/services/registry"
+import { repondre } from "@razzia/socket/services/reponse"
 import { withManagerGame, withPlayerGame } from "@razzia/socket/utils/game"
 import { getClientId } from "@razzia/socket/utils/socket"
 
@@ -115,10 +116,14 @@ export const gameSocketHandlers = ({ io, socket }: SocketContext) => {
     withManagerGame(gameId, socket, (game) => game.start(socket)),
   )
 
+  // IQ : `repondre` enregistre en base les réponses des parties de séance (SCRUM-28).
   socket.on(EVENTS.PLAYER.SELECTED_ANSWER, ({ gameId, data }) =>
-    withPlayerGame(gameId, socket, (game) =>
-      game.selectAnswer(socket, data.answerKeys),
-    ),
+    withPlayerGame(gameId, socket, (game) => {
+      repondre(game, socket, data.answerKeys).catch((error: unknown) => {
+        console.error("Réponse IQ :", error)
+        socket.emit(EVENTS.GAME.ERROR_MESSAGE, "errors:reponse.echec")
+      })
+    }),
   )
 
   socket.on(EVENTS.MANAGER.ADVANCE, ({ gameId }) =>

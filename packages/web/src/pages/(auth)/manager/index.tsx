@@ -16,7 +16,7 @@ const ManagerAuthPage = () => {
     mutationFn: managerLogin,
     onSuccess: (session) => {
       setToken(session.token)
-      navigate({ to: "/manager/config" })
+      navigate({ to: "/manager/cours" })
     },
     onError: (error) => {
       toast.error(
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/(auth)/manager/")({
   beforeLoad: () => {
     if (getRole() === SESSION_ROLES.MANAGER) {
       // oxlint-disable-next-line typescript/only-throw-error
-      throw redirect({ to: "/manager/config" })
+      throw redirect({ to: "/manager/cours" })
     }
   },
   component: ManagerAuthPage,

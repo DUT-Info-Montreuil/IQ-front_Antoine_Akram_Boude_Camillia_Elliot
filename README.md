@@ -99,6 +99,44 @@ Open http://localhost:3000 to play and http://localhost:3000/manager to host a g
 
 > Want to work on the code? See [CONTRIBUTING.md](.github/CONTRIBUTING.md) to run it in development mode.
 
+### 🗄️ Database (PostgreSQL)
+
+IQ stores its data in PostgreSQL 16, with the schema and migrations managed by Drizzle. Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) running.
+
+1. Create your `.env` if you don't have one. It already contains `DATABASE_URL=postgres://iq:iq@localhost:5432/iq`:
+
+```bash
+cp .env.example .env
+```
+
+2. Start PostgreSQL. This only starts the `postgres` service of `compose.yml`, on port `5432`, with its data kept in the `pgdata` volume:
+
+```bash
+pnpm db:up
+```
+
+3. Create or update the tables by applying the migrations:
+
+```bash
+pnpm db:migrate
+```
+
+4. Optional: browse the database in Drizzle Studio (http://local.drizzle.studio), or with `psql`:
+
+```bash
+pnpm --filter socket exec drizzle-kit studio
+```
+
+```bash
+docker compose exec postgres psql -U iq -d iq
+```
+
+To start over from an empty database, run `docker compose down -v`, then steps 2 and 3. After changing `packages/socket/src/db/schema.ts`, run `pnpm db:generate`, commit the new SQL file, then run `pnpm db:migrate`.
+
+> `'pnpm' is not recognized`? Enable it once with `corepack enable` in an administrator terminal, or `npm install -g pnpm`.
+
+Tables, constraints and conventions are described in [BD.md](BD.md).
+
 ## 📚 Documentation
 
 - [Configuration](docs/configuration.md): environment variables and the `config` folder.
