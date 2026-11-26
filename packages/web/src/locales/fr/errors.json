@@ -1,4 +1,11 @@
 {
+  "reponse": {
+    "tempsEcoule": "Temps écoulé : la réponse n’a pas été prise en compte",
+    "dejaEnregistree": "Réponse déjà enregistrée",
+    "nonInscrit": "Vous ne participez pas à cette séance",
+    "contenuInvalide": "Réponse invalide pour cette question",
+    "echec": "La réponse n’a pas pu être enregistrée, réessayez"
+  },
   "deroule": {
     "typeInconnu": "Élément du déroulé inconnu : seules les pages et les quiz peuvent être déplacés",
     "pageInvalide": "Cette page n’existe pas dans le PDF du cours",

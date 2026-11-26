@@ -15,7 +15,10 @@ import {
 import { saveResult } from "@razzia/socket/services/config"
 import { CooldownTimer } from "@razzia/socket/services/game/cooldown-timer"
 import { PlayerManager } from "@razzia/socket/services/game/player-manager"
-import { RoundManager } from "@razzia/socket/services/game/round-manager"
+import {
+  type CrochetsQuestion,
+  RoundManager,
+} from "@razzia/socket/services/game/round-manager"
 import Registry from "@razzia/socket/services/registry"
 import { createInviteCode } from "@razzia/socket/utils/game"
 import { createNickname } from "@razzia/socket/utils/nickname"
@@ -390,8 +393,18 @@ class Game {
     await this.round.start(socket)
   }
 
-  selectAnswer(socket: Socket, answerIds: number[]) {
-    this.round.selectAnswer(socket, answerIds)
+  selectAnswer(socket: Socket, answerIds: number[], pointsFixes?: number) {
+    this.round.selectAnswer(socket, answerIds, pointsFixes)
+  }
+
+  /** IQ : vrai pendant la fenêtre de réponse d'une question. */
+  get accepteReponses(): boolean {
+    return this.round.acceptsAnswers()
+  }
+
+  /** IQ : lancement et clôture des questions enregistrés par la séance. */
+  setCrochets(crochets: CrochetsQuestion) {
+    this.round.setCrochets(crochets)
   }
 
   advance() {

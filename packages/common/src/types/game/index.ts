@@ -18,7 +18,7 @@ export interface MultiQuestionOptions {
 }
 
 export type EstimationInputMode =
-    (typeof ESTIMATION_INPUT_MODES)[keyof typeof ESTIMATION_INPUT_MODES]
+  (typeof ESTIMATION_INPUT_MODES)[keyof typeof ESTIMATION_INPUT_MODES]
 
 export interface EstimationQuestionOptions {
   inputMode: EstimationInputMode
@@ -43,11 +43,13 @@ export interface Answer {
   playerId: string
   answerIds: number[]
   points: number
+  /** IQ : `points` vient de ScoreService (barème et rapidité du dossier), à garder tel quel. */
+  pointsFixes?: boolean
 }
 
 export type QuestionMediaType =
-    | (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
-    | undefined
+  | (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
+  | undefined
 
 export interface QuestionMedia {
   type?: QuestionMediaType
@@ -55,7 +57,7 @@ export interface QuestionMedia {
 }
 
 export type UploadedMediaType =
-    (typeof ACCEPTED_MEDIA_TYPES)[keyof typeof ACCEPTED_MEDIA_TYPES]["type"]
+  (typeof ACCEPTED_MEDIA_TYPES)[keyof typeof ACCEPTED_MEDIA_TYPES]["type"]
 
 export interface UploadedMedia {
   name: string

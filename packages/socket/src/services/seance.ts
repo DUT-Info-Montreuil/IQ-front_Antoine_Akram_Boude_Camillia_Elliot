@@ -1,5 +1,6 @@
-import { and, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq, inArray } from "drizzle-orm"
 import type { QuizzValidated } from "@razzia/common/validators/quizz"
+import type { QuestionNotee } from "@razzia/socket/services/score"
 import {
   EVENTS,
   MEDIA_TYPES,
@@ -9,7 +10,13 @@ import {
   SESSION_ROLES,
 } from "@razzia/common/constants"
 import { getDb } from "@razzia/socket/db"
-import { seance, versionPdf } from "@razzia/socket/db/schema"
+import {
+  lancement,
+  proposition,
+  question,
+  seance,
+  versionPdf,
+} from "@razzia/socket/db/schema"
 import { verifierAcces } from "@razzia/socket/services/cours"
 import {
   conflict,
@@ -23,6 +30,7 @@ import { getIo } from "@razzia/socket/services/io"
 import { obtenirQuiz } from "@razzia/socket/services/quiz"
 import Registry from "@razzia/socket/services/registry"
 import { createInviteCode } from "@razzia/socket/utils/game"
+import { SECOND_MS } from "@razzia/socket/utils/sleep"
 
 /**
  * SeanceService et Moteur.ouvrirQuiz (dossier de conception, Tableau 40),
@@ -43,6 +51,16 @@ interface SeanceEnCours {
    * à enregistrer dans `participation` avec le LDAP et le CU 2.2.
    */
   participants: Map<string, string>
+  /** SCRUM-28 : QCM du quiz ouvert, dans l'ordre du moteur, avec leur barème. */
+  questions: Array<QuestionNotee & { idQuestion: number }>
+  /** Question en cours de réponse (lancement OUVERTE en base). */
+  lancement: {
+    idLancement: number
+    indice: number
+    dateCloturePrevue: Date
+  } | null
+  /** ClientId Razzia → participation en base, créée à la première réponse. */
+  participations: Map<string, number>
 }
 
 /** Registre des séances ouvertes (Tableau 6). Perdu au redémarrage : reconstruction hors SCRUM-64. */
@@ -110,6 +128,9 @@ export const ouvrirSeance = async (
     codeAcces,
     gameId: null,
     participants: new Map(),
+    questions: [],
+    lancement: null,
+    participations: new Map(),
   })
 
   return {
@@ -172,6 +193,13 @@ export const terminerSeance = async (
 
   fermerPartie(enCours?.gameId ?? null, true)
   seancesOuvertes.delete(idSeance)
+  // Une question interrompue par la fin de séance ne doit pas rester ouverte en base.
+  await getDb()
+    .update(lancement)
+    .set({ statut: "CLOSE", dateCloture: dateFin })
+    .where(
+      and(eq(lancement.idSeance, idSeance), eq(lancement.statut, "OUVERTE")),
+    )
 
   return {
     idSeance,
@@ -204,7 +232,7 @@ export const versMoteur = (
   gameMode: QUIZZ_MODES.QUIZ,
   subject: quiz.titre,
   questions: quiz.questions
-    .filter((question) => question.type === "QCM")
+    .filter((q) => q.type === "QCM")
     .map(({ enonce, propositions, pointsMax, dureeSecondes, options }) => ({
       type: QUESTION_TYPES.MULTI,
       question: enonce,
@@ -228,6 +256,89 @@ export const versMoteur = (
       }),
     })),
 })
+
+/** Barème des QCM du quiz, dans l'ordre où versMoteur les donne au moteur. */
+const chargerBareme = async (idQuiz: number) => {
+  const db = getDb()
+  const questions = await db
+    .select({
+      idQuestion: question.idQuestion,
+      pointsMax: question.pointsMax,
+      dureeSecondes: question.dureeSecondes,
+    })
+    .from(question)
+    .where(and(eq(question.idQuiz, idQuiz), eq(question.type, "QCM")))
+    .orderBy(asc(question.ordre))
+  const propositions =
+    questions.length === 0
+      ? []
+      : await db
+          .select({
+            idQuestion: proposition.idQuestion,
+            idProposition: proposition.idProposition,
+            points: proposition.points,
+          })
+          .from(proposition)
+          .where(
+            inArray(
+              proposition.idQuestion,
+              questions.map((q) => q.idQuestion),
+            ),
+          )
+          .orderBy(asc(proposition.ordre))
+
+  return questions.map((q) => ({
+    idQuestion: q.idQuestion,
+    pointsMax: q.pointsMax,
+    dureeMs: q.dureeSecondes * SECOND_MS,
+    propositions: propositions
+      .filter((p) => p.idQuestion === q.idQuestion)
+      .map(({ idProposition, points }) => ({ idProposition, points })),
+  }))
+}
+
+/** Lancement en base à l'ouverture et à la clôture de chaque question (CU 2.1, étapes 4 et 6). */
+const crochetsLancement = (enCours: SeanceEnCours) => ({
+  ouverture: async (indice: number) => {
+    const q = enCours.questions.at(indice)
+
+    if (!q) {
+      return
+    }
+
+    const dateCloturePrevue = new Date(Date.now() + q.dureeMs)
+    const [cree] = await getDb()
+      .insert(lancement)
+      .values({
+        idSeance: enCours.idSeance,
+        idQuestion: q.idQuestion,
+        dateCloturePrevue,
+      })
+      .returning({ idLancement: lancement.idLancement })
+
+    enCours.lancement = {
+      idLancement: cree.idLancement,
+      indice,
+      dateCloturePrevue,
+    }
+  },
+  cloture: async () => {
+    const ouvert = enCours.lancement
+
+    enCours.lancement = null
+
+    if (ouvert) {
+      await getDb()
+        .update(lancement)
+        .set({ statut: "CLOSE", dateCloture: new Date() })
+        .where(eq(lancement.idLancement, ouvert.idLancement))
+    }
+  },
+})
+
+/** Séance dont `gameId` est la partie en cours (undefined pour une partie Razzia classique). */
+export const seanceDeLaPartie = (gameId: string) =>
+  [...seancesOuvertes.values()].find((enCours) => enCours.gameId === gameId)
 
 /** Contrôles de la figure 12, dans l'ordre ; renvoie la séance en cours. */
 const controlerOuverture = async (
@@ -303,6 +414,9 @@ export const ouvrirQuiz = async (
     generatedUsernames: quiz.optionsPartie.pseudosGeneres,
     answersOnly: quiz.optionsPartie.reponsesSeulement,
   })
+  enCours.questions = await chargerBareme(idQuiz)
+  enCours.lancement = null
+  nouvelle.setCrochets(crochetsLancement(enCours))
   registry.addGame(nouvelle)
   registry.markGameAsEmpty(nouvelle)
   enCours.gameId = nouvelle.gameId

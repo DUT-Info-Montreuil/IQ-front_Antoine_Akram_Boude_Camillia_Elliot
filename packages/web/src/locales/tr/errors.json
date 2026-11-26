@@ -1,4 +1,11 @@
 {
+  "reponse": {
+    "tempsEcoule": "Time is up: the answer was not taken into account",
+    "dejaEnregistree": "Answer already recorded",
+    "nonInscrit": "You are not taking part in this session",
+    "contenuInvalide": "Invalid answer for this question",
+    "echec": "The answer could not be recorded, try again"
+  },
   "deroule": {
     "typeInconnu": "Unknown outline item: only pages and quizzes can be moved",
     "pageInvalide": "This page does not exist in the course PDF",

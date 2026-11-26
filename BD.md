@@ -64,6 +64,27 @@ partagée.
 `reponse.contenu` : QCM → tableau d'`id_proposition` ; RELIER → couples d'`id_paire` ;
 LIBRE → texte saisi.
 
+### Écriture des séances (SCRUM-64 et SCRUM-28)
+
+Aucune migration : les tables du MLD suffisent.
+
+| Moment | Écriture |
+|---|---|
+| `POST /api/seances` | `seance` OUVERTE (version courante, code à 6 chiffres) |
+| Question ouverte dans une partie de séance | `lancement` OUVERTE, `date_cloture_prevue` = ouverture + durée |
+| Échéance, clôture anticipée ou fin de séance | `lancement` CLOSE, `date_cloture` |
+| Première réponse d'un étudiant dans la séance | `utilisateur` ETUDIANT provisoire (`login = razzia:<clientId>`) et `participation` (pseudo) |
+| Chaque réponse acceptée, **avant l'accusé de réception** | `reponse` : `contenu`, `date_reponse` (horloge du serveur), `temps_restant_ms`, `taux_reussite`, `points_reponse`, `points_classement`, `mode_correction = AUTO` |
+| `POST /api/seances/{id}/fin` | `seance` TERMINEE, `date_fin` |
+
+Règles : une réponse reçue après `date_cloture_prevue` est refusée ; l'unicité
+`(id_lancement, id_participation)` refuse la deuxième réponse. Points de réponse = somme des points des
+propositions cochées, ramenée entre 0 et `points_max` ; points de classement =
+arrondi(points de réponse × (1 + temps restant / durée)). Seuls les points de réponse comptent pour la note.
+
+L'étudiant provisoire est un raccourci en attendant le LDAP (CU 1.1) et l'inscription à la séance (CU 2.2),
+qui remplaceront ces comptes `razzia:*` par les vrais étudiants.
+
 ## Migrations
 
 | Fichier | Contenu |
@@ -170,7 +191,8 @@ corepack pnpm --filter socket db:migrate
 ## Non couvert par la base
 
 - `points_reponse ≤ points_max` de la question : cette règle porte sur deux tables, un `CHECK` ne
-  peut donc pas l'exprimer. Elle est à vérifier dans le service de réponse (ou par un trigger si besoin).
+  peut donc pas l'exprimer. Elle est garantie par `ScoreService` (`packages/socket/src/services/score.ts`),
+  qui ramène la somme des points cochés entre 0 et `points_max`.
 - L'application n'exécute pas les migrations au démarrage (prévu par le dossier §2.6) : lancer
   `db:migrate` après chaque mise à jour du dépôt.
 - Le rang des quiz placés après une même page est recalculé par QuizService à chaque création,
