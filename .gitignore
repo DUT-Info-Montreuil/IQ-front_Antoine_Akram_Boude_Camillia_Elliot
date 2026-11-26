@@ -4,3 +4,5 @@
 .secrets
 release.json
 /coverage
+# IDE
+.idea/

@@ -66,7 +66,8 @@
     "notePlaceholder": "Añade una explicación que se muestra al revelar la respuesta",
     "estimation": {
       "correctAnswer": "Respuesta correcta"
-    }
+    },
+    "answerPoints": "Points for {{label}}"
   },
   "questionHasErrors": "Esta pregunta contiene errores",
   "questionType": {

@@ -64,6 +64,17 @@ const PlayerGamePage = () => {
         player: { username, points: 0 },
         status: createStatus(STATUS.WAIT, { text: "game:waitingForPlayers" }),
       })
+
+      // IQ (SCRUM-64) : inscrit d'office au quiz suivant de la séance. On met
+      // l'URL à jour pour qu'un rechargement rejoigne la nouvelle partie.
+      if (joinedGameId !== gameIdParam) {
+        localStorage.setItem("game_id", joinedGameId)
+        void navigate({
+          to: "/party/$gameId",
+          params: { gameId: joinedGameId },
+          replace: true,
+        })
+      }
     },
   )
 
