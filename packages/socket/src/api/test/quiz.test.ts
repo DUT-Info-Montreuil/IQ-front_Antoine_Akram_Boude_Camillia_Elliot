@@ -207,6 +207,20 @@ describe("POST /api/cours/{id}/quiz (CU 1.3)", () => {
       "errors:quiz.expressionInvalide",
     ],
     [{ apresPage: 4 }, "errors:quiz.positionInvalide"],
+    [
+      {
+        questions: [
+          qcm({
+            pointsMax: 10,
+            propositions: [
+              { libelle: "A", estCorrecte: true, points: 10 },
+              { libelle: "B", estCorrecte: true, points: 10 },
+            ],
+          }),
+        ],
+      },
+      "errors:quiz.sommePointsSuperieureMax",
+    ],
   ] as Array<[Partial<QuizSaisie>, string]>)(
     "refuse %o",
     async (overrides, erreur) => {
