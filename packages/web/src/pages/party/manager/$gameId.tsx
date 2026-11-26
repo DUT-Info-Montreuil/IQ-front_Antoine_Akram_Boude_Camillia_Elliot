@@ -78,12 +78,37 @@ const ManagerGamePage = () => {
     toast.error(t(message))
   })
 
+  // IQ : un quiz ouvert depuis une présentation y revient, dans la même
+  // séance (même code d'accès pour le quiz suivant).
+  const retourCours = () => {
+    resetManager()
+    setQuestionStates(null)
+
+    if (contexte.cours) {
+      navigate({
+        to: "/manager/cours/presenter/$coursId",
+        params: { coursId: String(contexte.cours) },
+        search: { etape: contexte.etape, seance: contexte.seance },
+      })
+
+      return
+    }
+
+    navigate({ to: "/manager/cours" })
+  }
+
   const handleSkip = () => {
     if (!status) {
       return
     }
 
     if (status.name === STATUS.FINISHED || status.name === STATUS.SUMMARY) {
+      if (contexte.cours) {
+        retourCours()
+
+        return
+      }
+
       navigate({ to: "/manager/config" })
       resetManager()
       setQuestionStates(null)
@@ -121,23 +146,6 @@ const ManagerGamePage = () => {
 
   // IQ : salle d'attente habillée selon la maquette E5 (CU 2.1).
   if (status.name === STATUS.SHOW_ROOM && gameId) {
-    const retourCours = () => {
-      resetManager()
-      setQuestionStates(null)
-
-      if (contexte.cours) {
-        navigate({
-          to: "/manager/cours/presenter/$coursId",
-          params: { coursId: String(contexte.cours) },
-          search: { etape: contexte.etape },
-        })
-
-        return
-      }
-
-      navigate({ to: "/manager/cours" })
-    }
-
     return (
       <SalleAttente
         inviteCode={status.data.inviteCode ?? ""}

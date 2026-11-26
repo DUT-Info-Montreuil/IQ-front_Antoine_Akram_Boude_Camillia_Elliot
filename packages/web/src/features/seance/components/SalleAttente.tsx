@@ -15,7 +15,7 @@ import {
   useSocket,
 } from "@razzia/web/features/game/contexts/socket-context"
 import { useManagerStore } from "@razzia/web/features/game/stores/manager"
-import { quizzQuery } from "@razzia/web/features/manager/queries"
+import { quizQuery } from "@razzia/web/features/quiz/queries"
 import {
   type ContexteSeance,
   formaterCode,
@@ -63,7 +63,7 @@ const SalleAttente = ({
     enabled: Boolean(contexte.cours),
   })
   const quiz = useQuery({
-    ...quizzQuery(contexte.quiz ?? ""),
+    ...quizQuery(contexte.quiz ?? 0),
     enabled: Boolean(contexte.quiz),
   })
 
@@ -102,11 +102,14 @@ const SalleAttente = ({
 
   const urlAcces = `${window.location.origin}?pin=${inviteCode}`
   const hote = window.location.host
-  const nbQuestions = quiz.data?.questions.length
+  // Seuls les QCM sont joués en séance (RELIER et LIBRE : lot 2).
+  const nbQuestions = quiz.data?.questions.filter(
+    (q) => q.type === "QCM",
+  ).length
   const surtitre = [
     cours.data?.codeRessource,
     t("manager:seance.quiz"),
-    quiz.data?.subject,
+    quiz.data?.titre,
   ]
     .filter(Boolean)
     .join(" · ")

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   ArrowRight,
@@ -8,7 +8,7 @@ import {
   Minimize,
   Play,
 } from "lucide-react"
-import { useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
@@ -24,17 +24,32 @@ import {
   fichierCoursQuery,
 } from "@razzia/web/features/cours/queries"
 import { bouton } from "@razzia/web/features/cours/ui"
+import { useSocketConnection } from "@razzia/web/features/game/hooks/useSocketConnection"
 import { useManagerStore } from "@razzia/web/features/game/stores/manager"
 import { createStatus } from "@razzia/web/features/game/utils/createStatus"
-import { quizQuery } from "@razzia/web/features/quiz/queries"
 import { formaterDuree } from "@razzia/web/features/quiz/validation"
-import { ouvrirDansMoteur } from "@razzia/web/features/seance/moteur"
+import {
+  ouvrirQuiz,
+  ouvrirSeance,
+  terminerSeance,
+} from "@razzia/web/features/seance/api"
 import { useFullscreen } from "@razzia/web/hooks/useFullscreen"
 import { ApiError } from "@razzia/web/lib/api"
 
 const searchSchema = z.object({
   etape: z.coerce.number().int().positive().optional(),
+  /** Séance ouverte au début de la présentation (POST /api/seances). */
+  seance: z.coerce.number().int().positive().optional(),
 })
+
+/** Erreurs après lesquelles la séance n'existe plus côté serveur. */
+const SEANCE_PERDUE = new Set([
+  "errors:seance.introuvable",
+  "errors:seance.terminee",
+])
+
+const cleErreur = (error: unknown, repli: string) =>
+  error instanceof ApiError ? error.key : repli
 
 type Etape =
   | { type: "page"; numero: number }
@@ -69,13 +84,15 @@ const construireEtapes = (
 /** Présentation du cours en salle (E5), page par page, quiz compris. */
 const PresentationPage = () => {
   const { coursId } = Route.useParams()
-  const { etape: etapeDemandee } = Route.useSearch()
+  const { etape: etapeDemandee, seance: idSeance } = Route.useSearch()
   const idCours = Number(coursId)
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { updateManager } = useManagerStore()
   const { isFullscreen, toggle } = useFullscreen()
   const { t } = useTranslation()
+  const seanceEnCours = useRef<Promise<number> | null>(null)
+
+  useSocketConnection()
 
   const cours = useQuery(coursQuery(idCours))
   const fichier = useQuery({
@@ -94,19 +111,63 @@ const PresentationPage = () => {
 
   const allerA = (cible: number) => {
     if (cible >= 1 && cible <= total) {
-      void navigate({ to: ".", search: { etape: cible }, replace: true })
+      void navigate({
+        to: ".",
+        search: { etape: cible, seance: idSeance },
+        replace: true,
+      })
     }
   }
 
+  /**
+   * « Présenter » ouvre une séance (un seul code d'accès pour tous les quiz
+   * de la présentation) et garde son id dans l'URL jusqu'à la fin.
+   */
+  const assurerSeance = useCallback(() => {
+    if (idSeance) {
+      return Promise.resolve(idSeance)
+    }
+
+    seanceEnCours.current ??= ouvrirSeance(idCours)
+      .then((seance) => {
+        void navigate({
+          to: ".",
+          search: { etape: etapeDemandee, seance: seance.idSeance },
+          replace: true,
+        })
+
+        return seance.idSeance
+      })
+      .catch((error: unknown) => {
+        seanceEnCours.current = null
+
+        throw error
+      })
+
+    return seanceEnCours.current
+  }, [idSeance, idCours, etapeDemandee, navigate])
+
+  useEffect(() => {
+    assurerSeance().catch((error: unknown) =>
+      toast.error(t(cleErreur(error, "errors:seance.ouvertureImpossible"))),
+    )
+  }, [assurerSeance, t])
+
   const ouverture = useMutation({
     mutationFn: async (element: ElementDeroule) =>
-      ouvrirDansMoteur(await queryClient.query(quizQuery(element.id))),
-    onSuccess: ({ gameId, inviteCode, idMoteur, ignorees }) => {
-      if (ignorees > 0) {
-        toast(t("manager:seance.questionsIgnorees", { nb: ignorees }), {
-          icon: "ℹ️",
-          duration: 6000,
-        })
+      ouvrirQuiz(await assurerSeance(), element.id),
+    onSuccess: (
+      { gameId, inviteCode, questionsIgnorees, idSeance: seance },
+      element,
+    ) => {
+      if (questionsIgnorees > 0) {
+        toast(
+          t("manager:seance.questionsIgnorees", { nb: questionsIgnorees }),
+          {
+            icon: "ℹ️",
+            duration: 6000,
+          },
+        )
       }
 
       updateManager({
@@ -121,17 +182,27 @@ const PresentationPage = () => {
       void navigate({
         to: "/party/manager/$gameId",
         params: { gameId },
-        search: { cours: idCours, page, etape: indice, quiz: idMoteur },
+        search: {
+          seance,
+          cours: idCours,
+          page,
+          etape: indice,
+          quiz: element.id,
+        },
       })
     },
-    onError: (error) =>
-      toast.error(
-        t(
-          error instanceof ApiError
-            ? error.key
-            : "errors:quiz.ouvertureEchouee",
-        ),
-      ),
+    onError: (error) => {
+      const cle = cleErreur(error, "errors:quiz.ouvertureEchouee")
+
+      // Séance perdue (serveur redémarré, séance close) : la prochaine
+      // ouverture de quiz en crée une nouvelle.
+      if (SEANCE_PERDUE.has(cle)) {
+        seanceEnCours.current = null
+        void navigate({ to: ".", search: { etape: indice }, replace: true })
+      }
+
+      toast.error(t(cle))
+    },
   })
 
   useEffect(() => {
@@ -142,16 +213,34 @@ const PresentationPage = () => {
 
       if (pas + recul !== 0 && cible >= 1 && cible <= total) {
         e.preventDefault()
-        void navigate({ to: ".", search: { etape: cible }, replace: true })
+        void navigate({
+          to: ".",
+          search: { etape: cible, seance: idSeance },
+          replace: true,
+        })
       }
     }
 
     window.addEventListener("keydown", clavier)
 
     return () => window.removeEventListener("keydown", clavier)
-  }, [navigate, indice, total])
+  }, [navigate, indice, total, idSeance])
 
-  const terminer = () => {
+  /** « Terminer la séance » : les étudiants sont renvoyés à l'accueil. */
+  const terminer = async () => {
+    if (idSeance) {
+      try {
+        await terminerSeance(idSeance)
+      } catch (error) {
+        const cle = cleErreur(error, "errors:route.description")
+
+        // Déjà terminée ou inconnue du serveur : rien à fermer.
+        if (!SEANCE_PERDUE.has(cle)) {
+          toast.error(t(cle))
+        }
+      }
+    }
+
     if (document.fullscreenElement) {
       void document.exitFullscreen()
     }
@@ -267,7 +356,7 @@ const PresentationPage = () => {
             title={t("manager:seance.terminer")}
             description={t("manager:seance.terminerConfirmation")}
             confirmLabel={t("manager:seance.terminer")}
-            onConfirm={terminer}
+            onConfirm={() => void terminer()}
           />
 
           <p className="flex items-center gap-3 text-white/70">
