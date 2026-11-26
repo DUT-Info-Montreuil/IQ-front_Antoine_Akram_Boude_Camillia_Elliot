@@ -3,6 +3,7 @@ import type {
   CoursDetail,
   CoursResume,
   CoursSource,
+  ElementOrdre,
 } from "@razzia/web/features/cours/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { ApiError } from "@razzia/web/lib/api"
@@ -13,9 +14,9 @@ import { clearToken, ensureSession } from "@razzia/web/lib/session"
  * Utilisé quand VITE_API_MOCK=false, une fois le back livré.
  */
 export const requete = async (
-  chemin: string,
-  init: RequestInit = {},
-  repli = "errors:route.description",
+    chemin: string,
+    init: RequestInit = {},
+    repli = "errors:route.description",
 ) => {
   const { token } = await ensureSession()
   const headers = new Headers(init.headers)
@@ -42,7 +43,7 @@ export const coursHttp: CoursSource = {
   lister: async () => (await (await requete("/cours")).json()) as CoursResume[],
 
   obtenir: async (idCours) =>
-    (await (await requete(`/cours/${idCours}`)).json()) as CoursDetail,
+      (await (await requete(`/cours/${idCours}`)).json()) as CoursDetail,
 
   creer: async ({ fichier, titre, codeRessource }) => {
     const form = new FormData()
@@ -55,14 +56,35 @@ export const coursHttp: CoursSource = {
     }
 
     const reponse = await requete(
-      "/cours",
-      { method: "POST", body: form },
-      "errors:cours.importEchoue",
+        "/cours",
+        { method: "POST", body: form },
+        "errors:cours.importEchoue",
     )
 
     return (await reponse.json()) as CoursDetail
   },
 
   lireFichier: async (idCours, numero) =>
-    (await requete(`/cours/${idCours}/versions/${numero}/fichier`)).blob(),
+      (await requete(`/cours/${idCours}/versions/${numero}/fichier`)).blob(),
+}
+
+
+/** Enregistre l'ordre global des pages et des quiz du cours. */
+export const reorganiserDeroule = async (
+    idCours: number,
+    ordre: ElementOrdre[],
+) => {
+  const reponse = await requete(
+      `/cours/${idCours}/deroule`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ordre }),
+      },
+      "errors:route.description",
+  )
+
+  return (await reponse.json()) as {
+    ordre: Array<ElementOrdre & { position: number }>
+  }
 }
