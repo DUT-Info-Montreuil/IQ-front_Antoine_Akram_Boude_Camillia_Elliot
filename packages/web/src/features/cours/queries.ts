@@ -3,8 +3,8 @@ import type { ImportCoursSaisie } from "@razzia/web/features/cours/types"
 import { coursHttp } from "@razzia/web/features/cours/api/http"
 import { coursMock } from "@razzia/web/features/cours/api/mock"
 
-/** Mock par défaut ; VITE_API_MOCK=false branche les vraies routes /api/cours. */
-export const API_COURS_MOCK = import.meta.env.VITE_API_MOCK !== "false"
+/** Vraies routes /api/cours par défaut ; VITE_API_MOCK=true repasse sur le mock IndexedDB (démo sans back). */
+export const API_COURS_MOCK = import.meta.env.VITE_API_MOCK === "true"
 
 const source = API_COURS_MOCK ? coursMock : coursHttp
 

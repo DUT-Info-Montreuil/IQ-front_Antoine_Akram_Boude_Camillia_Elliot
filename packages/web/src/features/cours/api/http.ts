@@ -10,7 +10,7 @@ import { clearToken, ensureSession } from "@razzia/web/lib/session"
 
 /**
  * Appels réels aux routes /api/cours du dossier de conception (tableau 27).
- * Utilisé quand VITE_API_MOCK=false, une fois le back livré.
+ * Utilisé par défaut (VITE_API_MOCK=true repasse sur le mock).
  */
 export const requete = async (
   chemin: string,
