@@ -265,6 +265,7 @@ const chargerBareme = async (idQuiz: number) => {
       idQuestion: question.idQuestion,
       pointsMax: question.pointsMax,
       dureeSecondes: question.dureeSecondes,
+      options: question.options,
     })
     .from(question)
     .where(and(eq(question.idQuiz, idQuiz), eq(question.type, "QCM")))
@@ -277,6 +278,7 @@ const chargerBareme = async (idQuiz: number) => {
             idQuestion: proposition.idQuestion,
             idProposition: proposition.idProposition,
             points: proposition.points,
+            estCorrecte: proposition.estCorrecte,
           })
           .from(proposition)
           .where(
@@ -291,9 +293,14 @@ const chargerBareme = async (idQuiz: number) => {
     idQuestion: q.idQuestion,
     pointsMax: q.pointsMax,
     dureeMs: q.dureeSecondes * SECOND_MS,
+    modeScore: q.options.modeScore,
     propositions: propositions
       .filter((p) => p.idQuestion === q.idQuestion)
-      .map(({ idProposition, points }) => ({ idProposition, points })),
+      .map(({ idProposition, points, estCorrecte }) => ({
+        idProposition,
+        points,
+        estCorrecte,
+      })),
   }))
 }
 
