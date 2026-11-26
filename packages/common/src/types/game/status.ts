@@ -36,7 +36,6 @@ export interface CommonStatusDataMap {
   SELECT_ANSWER: {
     question: string
     answers: string[]
-    correctAnswersCount: number
     media?: QuestionMedia
     time: number
     totalPlayer: number

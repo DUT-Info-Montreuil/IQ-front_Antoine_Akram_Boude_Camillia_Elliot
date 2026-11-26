@@ -18,13 +18,10 @@ import {
   isKeyOf,
 } from "@razzia/web/features/game/utils/constants"
 import { createStatus } from "@razzia/web/features/game/utils/createStatus"
-import SalleAttente from "@razzia/web/features/seance/components/SalleAttente"
-import { contexteSeanceSchema } from "@razzia/web/features/seance/contexte"
 
 const ManagerGamePage = () => {
   const navigate = useNavigate()
   const { gameId: gameIdParam } = useParams({ from: "/party/manager/$gameId" })
-  const contexte = Route.useSearch()
   const { socket, isConnected } = useSocket()
   const { gameId, status, updateManager, resetManager } = useManagerStore()
   const { setQuestionStates } = useQuestionStore()
@@ -119,35 +116,6 @@ const ManagerGamePage = () => {
     return null
   }
 
-  // IQ : salle d'attente habillée selon la maquette E5 (CU 2.1).
-  if (status.name === STATUS.SHOW_ROOM && gameId) {
-    const retourCours = () => {
-      resetManager()
-      setQuestionStates(null)
-
-      if (contexte.cours) {
-        navigate({
-          to: "/manager/cours/presenter/$coursId",
-          params: { coursId: String(contexte.cours) },
-          search: { etape: contexte.etape },
-        })
-
-        return
-      }
-
-      navigate({ to: "/manager/cours" })
-    }
-
-    return (
-      <SalleAttente
-        inviteCode={status.data.inviteCode ?? ""}
-        contexte={contexte}
-        onLancer={handleSkip}
-        onTerminer={retourCours}
-      />
-    )
-  }
-
   return (
     <GameWrapper
       statusName={status.name}
@@ -161,7 +129,6 @@ const ManagerGamePage = () => {
 }
 
 export const Route = createFileRoute("/party/manager/$gameId")({
-  validateSearch: contexteSeanceSchema,
   component: ManagerGamePage,
   onLeave: ({ params: { gameId } }) => {
     socketClient.emit(EVENTS.MANAGER.LEAVE, { gameId })

@@ -19,10 +19,6 @@ export const clientEventValidators = {
   [EVENTS.MANAGER.SET_LOCK]: gameMessageValidator.extend({
     locked: z.boolean(),
   }),
-  [EVENTS.MANAGER.OPEN_QUIZ]: z.object({
-    idSeance: z.number().int().positive(),
-    idQuiz: z.number().int().positive(),
-  }),
   [EVENTS.PLAYER.LOGIN]: z.object({ ticket: z.string().min(1) }),
   [EVENTS.PLAYER.RECONNECT]: gameMessageValidator,
   [EVENTS.PLAYER.LEAVE]: gameMessageValidator,

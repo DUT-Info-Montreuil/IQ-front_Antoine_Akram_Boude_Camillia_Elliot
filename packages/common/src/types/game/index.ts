@@ -43,8 +43,6 @@ export interface Answer {
   playerId: string
   answerIds: number[]
   points: number
-  /** IQ : `points` vient de ScoreService (barème et rapidité du dossier), à garder tel quel. */
-  pointsFixes?: boolean
 }
 
 export type QuestionMediaType =
@@ -72,8 +70,6 @@ export interface Question {
   note?: string
   media?: QuestionMedia
   answers: string[]
-  /** Points awarded for each answer option (same index as answers). */
-  answerPoints?: number[]
   solutions?: number[]
   cooldown: number
   time: number

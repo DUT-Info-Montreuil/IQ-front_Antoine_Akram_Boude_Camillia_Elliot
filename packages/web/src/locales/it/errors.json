@@ -1,30 +1,4 @@
 {
-  "reponse": {
-    "tempsEcoule": "Time is up: the answer was not taken into account",
-    "dejaEnregistree": "Answer already recorded",
-    "nonInscrit": "You are not taking part in this session",
-    "contenuInvalide": "Invalid answer for this question",
-    "echec": "The answer could not be recorded, try again"
-  },
-  "deroule": {
-    "typeInconnu": "Unknown outline item: only pages and quizzes can be moved",
-    "pageInvalide": "This page does not exist in the course PDF",
-    "pageManquante": "Each PDF page must appear once in the outline",
-    "doublon": "An item appears twice in the outline",
-    "quizInconnu": "This quiz does not belong to the course",
-    "quizManquant": "A quiz of the course is missing from the outline"
-  },
-  "seance": {
-    "questionOuverte": "A question of this quiz is open in a session: try again when it ends",
-    "quizDejaJoue": "This quiz has already been played: its questions can no longer be changed",
-    "reponsesExistantes": "This quiz already has answers: confirm to delete them with it",
-    "coursSansVersion": "This course has no PDF to present yet",
-    "codeIndisponible": "No free session code right now, try again",
-    "introuvable": "Session not found: reopen the presentation",
-    "terminee": "This session has ended",
-    "nonAutorise": "Only the session host can open its quizzes",
-    "ouvertureImpossible": "Unable to open the quiz, try again"
-  },
   "api": {
     "notFound": "La risorsa richiesta non esiste",
     "serverError": "Il server ha riscontrato un errore, riprova"
@@ -101,51 +75,5 @@
     "notFound": "File non trovato",
     "tooLarge": "Il file è troppo grande",
     "uploadFailed": "Caricamento del file non riuscito"
-  },
-  "cours": {
-    "fichierManquant": "Choose a PDF file",
-    "pasUnPdf": "This file is not a PDF",
-    "tropVolumineux": "The file is larger than {{max}} MB",
-    "pdfIllisible": "Unreadable PDF: it is corrupted or password protected",
-    "titreVide": "The title cannot be empty",
-    "titreTropLong": "The title is too long",
-    "codeRessourceTropLong": "The module code is too long",
-    "importEchoue": "The course import failed, try again",
-    "introuvable": "Course not found",
-    "accesRefuse": "You do not have access to this course",
-    "affichageImpossible": "Unable to display this PDF"
-  },
-  "quiz": {
-    "titreVide": "Give the quiz a title",
-    "titreTropLong": "The quiz title is too long",
-    "aucuneQuestion": "A quiz has at least one question",
-    "enonceVide": "The question text cannot be empty",
-    "dureeHorsLimites": "The time must be between {{min}} and {{max}} seconds",
-    "pointsMaxInvalides": "Maximum points must be a whole number of at least 1",
-    "tropPeuPropositions": "A question has at least 2 answers",
-    "tropDePropositions": "A question has at most 4 answers",
-    "propositionVide": "An answer cannot be empty",
-    "aucuneBonneReponse": "Tick at least one right answer",
-    "bonneReponseSansPoints": "A right answer must be worth at least 1 point",
-    "pointsEntiers": "Points must be a whole number",
-    "pointsNegatifs": "Points cannot be negative",
-    "pointsSuperieursMax": "Points exceed the question maximum",
-    "introuvable": "Quiz not found",
-    "positionInvalide": "This page does not exist in the course",
-    "invalide": "The quiz has input errors",
-    "enregistrementEchoue": "Saving the quiz failed, try again",
-    "ouvertureEchouee": "Unable to open the quiz, try again",
-    "tropPeuPaires": "A question has at least 2 pairs",
-    "tropDePaires": "A question has at most 8 pairs",
-    "paireIncomplete": "Fill in both items of the pair",
-    "paireEnDouble": "This item already appears in another pair",
-    "tropDExpressions": "A question has at most 10 expressions",
-    "expressionVide": "The expression cannot be empty",
-    "expressionInvalide": "Invalid regular expression",
-    "delaiHorsLimites": "The reading delay must be between {{delaiMin}} and {{delaiMax}} seconds",
-    "categorieTropLongue": "The category is at most {{categorieMax}} characters",
-    "noteTropLongue": "The note is at most {{noteMax}} characters",
-    "mediaInvalide": "Invalid media address: upload a file or paste an https:// address",
-    "aucuneQuestionJouable": "This quiz has no MCQ: the session engine cannot play the other types yet"
   }
 }

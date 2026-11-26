@@ -29,11 +29,6 @@ export const scoreQuestion = (
         return 0
       }
 
-      // IQ : points déjà notés par ScoreService ; une réponse qui en rapporte est juste.
-      if (playerAnswer.pointsFixes) {
-        return playerAnswer.points > 0 ? 1 : 0
-      }
-
       const scoring = QUESTION_SCORING[question.type]
 
       return scoring(question, playerAnswer.answerIds)

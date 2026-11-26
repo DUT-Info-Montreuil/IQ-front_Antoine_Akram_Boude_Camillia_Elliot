@@ -67,12 +67,6 @@ interface RoundStep {
   delay: (_settings: GameSettings) => number
 }
 
-/** IQ : appelés à l'ouverture et à la clôture de chaque question (lancement en base, CU 2.3). */
-export interface CrochetsQuestion {
-  ouverture?: (_indice: number) => Promise<void>
-  cloture?: (_indice: number) => Promise<void>
-}
-
 export class RoundManager {
   private readonly opts: RoundManagerOptions
   private readonly steps: RoundStep[]
@@ -86,7 +80,6 @@ export class RoundManager {
   private tempOldLeaderboard: Player[] | null = null
   private questionsHistory: QuestionResult[] = []
   private autoAdvanceTimer: NodeJS.Timeout | null = null
-  private crochets: CrochetsQuestion = {}
 
   constructor(opts: RoundManagerOptions) {
     this.opts = opts
@@ -118,28 +111,6 @@ export class RoundManager {
 
   isStarted(): boolean {
     return this.started
-  }
-
-  // IQ : entre l'affichage de l'énoncé et la révélation de la réponse.
-  isQuestionOpen(): boolean {
-    return this.started && this.isAskingQuestion()
-  }
-
-  // IQ : vrai pendant la fenêtre de réponse (SELECT_ANSWER).
-  acceptsAnswers(): boolean {
-    return this.acceptingAnswers
-  }
-
-  setCrochets(crochets: CrochetsQuestion): void {
-    this.crochets = crochets
-  }
-
-  private async appelerCrochet(crochet: CrochetsQuestion["ouverture"]) {
-    try {
-      await crochet?.(this.currentQuestion)
-    } catch (error) {
-      console.error("Crochet de question IQ :", error)
-    }
   }
 
   private get question(): Question {
@@ -341,20 +312,12 @@ export class RoundManager {
       return
     }
 
-    await this.appelerCrochet(this.crochets.ouverture)
-
-    if (!this.started) {
-      return
-    }
-
     this.startTime = Date.now()
     this.acceptingAnswers = true
 
     this.opts.broadcast(STATUS.SELECT_ANSWER, {
       question: this.question.question,
       answers: this.question.answers,
-
-      correctAnswersCount: Math.max(this.question.solutions?.length ?? 1, 1),
       media: this.question.media,
       time: this.question.time,
       totalPlayer: this.opts.players.count(),
@@ -366,7 +329,6 @@ export class RoundManager {
     await this.opts.cooldown.start(this.question.time)
 
     this.acceptingAnswers = false
-    await this.appelerCrochet(this.crochets.cloture)
 
     if (!this.started) {
       return
@@ -556,12 +518,7 @@ export class RoundManager {
     return [Math.min(options.max, Math.max(options.min, value))]
   }
 
-  // IQ : `pointsFixes` = points de classement déjà calculés par ScoreService.
-  selectAnswer(
-    socket: Socket,
-    answerIds: number[],
-    pointsFixes?: number,
-  ): void {
+  selectAnswer(socket: Socket, answerIds: number[]): void {
     const player = this.opts.players.findById(socket.id)
 
     if (!player || !this.acceptingAnswers) {
@@ -579,10 +536,6 @@ export class RoundManager {
     }
 
     const points = (() => {
-      if (pointsFixes !== undefined) {
-        return pointsFixes
-      }
-
       if (isEstimationOptions(this.question.options)) {
         return this.question.maxPoints ?? MAX_POINTS
       }
@@ -602,7 +555,6 @@ export class RoundManager {
       playerId: player.id,
       answerIds: submitted,
       points,
-      pointsFixes: pointsFixes !== undefined,
     })
 
     this.opts.send(socket.id, STATUS.WAIT, {

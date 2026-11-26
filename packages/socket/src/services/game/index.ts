@@ -15,10 +15,7 @@ import {
 import { saveResult } from "@razzia/socket/services/config"
 import { CooldownTimer } from "@razzia/socket/services/game/cooldown-timer"
 import { PlayerManager } from "@razzia/socket/services/game/player-manager"
-import {
-  type CrochetsQuestion,
-  RoundManager,
-} from "@razzia/socket/services/game/round-manager"
+import { RoundManager } from "@razzia/socket/services/game/round-manager"
 import Registry from "@razzia/socket/services/registry"
 import { createInviteCode } from "@razzia/socket/utils/game"
 import { createNickname } from "@razzia/socket/utils/nickname"
@@ -61,18 +58,10 @@ class Game {
     { name: Status; data: StatusDataMap[Status] }
   >()
 
-  // IQ : `inviteCode` impose le code de la séance, commun à tous ses quiz.
-  // Quatrième paramètre optionnel plutôt qu'un objet : les appels Razzia restent inchangés.
-  // oxlint-disable-next-line max-params
-  constructor(
-    io: Server,
-    managerClientId: string,
-    quizz: Quizz,
-    inviteCode: string = createInviteCode(),
-  ) {
+  constructor(io: Server, managerClientId: string, quizz: Quizz) {
     this.io = io
     this.gameId = uuid()
-    this.inviteCode = inviteCode
+    this.inviteCode = createInviteCode()
     this.gameMode = quizz.gameMode
     this._manager = {
       id: "",
@@ -122,11 +111,6 @@ class Game {
 
   get started(): boolean {
     return this.round.isStarted()
-  }
-
-  /** IQ : une question est affichée et pas encore corrigée. */
-  get questionOuverte(): boolean {
-    return this.round.isQuestionOpen()
   }
 
   get settings(): GameSettings {
@@ -393,18 +377,8 @@ class Game {
     await this.round.start(socket)
   }
 
-  selectAnswer(socket: Socket, answerIds: number[], pointsFixes?: number) {
-    this.round.selectAnswer(socket, answerIds, pointsFixes)
-  }
-
-  /** IQ : vrai pendant la fenêtre de réponse d'une question. */
-  get accepteReponses(): boolean {
-    return this.round.acceptsAnswers()
-  }
-
-  /** IQ : lancement et clôture des questions enregistrés par la séance. */
-  setCrochets(crochets: CrochetsQuestion) {
-    this.round.setCrochets(crochets)
+  selectAnswer(socket: Socket, answerIds: number[]) {
+    this.round.selectAnswer(socket, answerIds)
   }
 
   advance() {

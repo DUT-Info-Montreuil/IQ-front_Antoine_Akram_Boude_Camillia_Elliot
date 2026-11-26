@@ -1,2 +1,0 @@
-ALTER TABLE "question" ADD COLUMN "options" jsonb DEFAULT '{"delaiLecture":3,"penalite":0,"modeScore":"STRICT","categorie":"","note":"","media":null}'::jsonb NOT NULL;--> statement-breakpoint
-ALTER TABLE "quiz" ADD COLUMN "options_partie" jsonb DEFAULT '{"pseudosGeneres":false,"reponsesSeulement":false}'::jsonb NOT NULL;
