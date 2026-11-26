@@ -1,5 +1,10 @@
 import { StatusCodes } from "http-status-codes"
-import type { CoursDetail, CoursSource } from "@razzia/web/features/cours/types"
+import type {
+  CoursDetail,
+  CoursSource,
+  ElementOrdre,
+} from "@razzia/web/features/cours/types"
+import type { Quiz } from "@razzia/web/features/quiz/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { analyserPdf } from "@razzia/web/features/cours/pdf"
 import { PDF_TAILLE_MAX_OCTETS } from "@razzia/web/features/cours/validation"
@@ -194,4 +199,82 @@ export const coursMock: CoursSource = {
 
     return fichier
   },
+}
+
+/** Persiste aussi l'ordre global dans IndexedDB lorsque le front tourne en mock. */
+export const reorganiserDerouleMock = async (
+  idCours: number,
+  ordre: ElementOrdre[],
+) => {
+  await patienter()
+
+  const cours = await executer<CoursDetail | undefined>(
+    [STORE_COURS],
+    "readonly",
+    (tx) => tx.objectStore(STORE_COURS).get(idCours),
+  )
+
+  if (!cours) {
+    throw erreur(StatusCodes.NOT_FOUND)
+  }
+
+  const quizParId = new Map(
+    (
+      await executer<Quiz[]>([STORE_QUIZ], "readonly", (tx) =>
+        tx.objectStore(STORE_QUIZ).getAll(),
+      )
+    )
+      .filter((quiz) => quiz.idCours === idCours)
+      .map((quiz) => [quiz.id, quiz]),
+  )
+
+  let apresPage = 0
+  let rang = 0
+  for (const element of ordre) {
+    if (element.type === "PAGE") {
+      apresPage = element.numeroPdf
+      rang = 0
+
+      continue
+    }
+
+    const quiz = quizParId.get(element.id)
+
+    if (!quiz) {
+      continue
+    }
+    quiz.apresPage = apresPage
+    quiz.rang = rang
+    rang += 1
+  }
+
+  const deroule = cours.deroule.map((element) => {
+    if (element.type !== "QUIZ") {
+      return element
+    }
+    const quiz = quizParId.get(element.id)
+
+    return quiz
+      ? { ...element, apresPage: quiz.apresPage, rang: quiz.rang }
+      : element
+  })
+
+  const coursMisAJour: CoursDetail = {
+    ...cours,
+    deroule,
+    ordre,
+    dateModification: new Date().toISOString(),
+  }
+
+  await executer([STORE_COURS, STORE_QUIZ], "readwrite", (tx) => {
+    const quizStore = tx.objectStore(STORE_QUIZ)
+    for (const quiz of quizParId.values()) {
+      quizStore.put(quiz)
+    }
+    tx.objectStore(STORE_COURS).put(coursMisAJour)
+
+    return undefined
+  })
+
+  return { ordre: ordre.map((element, position) => ({ ...element, position })) }
 }

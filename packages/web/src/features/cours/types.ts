@@ -36,8 +36,14 @@ export interface CoursResume {
   dateModification: string
 }
 
+export type ElementOrdre =
+  | { type: "PAGE"; numeroPdf: number }
+  | { type: "QUIZ"; id: number }
+
 export interface CoursDetail extends CoursResume {
   versions: VersionPdf[]
+  /** Ordre global pages + quiz renvoyé par GET /api/cours/:id. */
+  ordre?: ElementOrdre[]
   deroule: ElementDeroule[]
   misDeCote: ElementDeroule[]
 }

@@ -3,6 +3,7 @@ import type {
   CoursDetail,
   CoursResume,
   CoursSource,
+  ElementOrdre,
 } from "@razzia/web/features/cours/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { ApiError } from "@razzia/web/lib/api"
@@ -65,4 +66,24 @@ export const coursHttp: CoursSource = {
 
   lireFichier: async (idCours, numero) =>
     (await requete(`/cours/${idCours}/versions/${numero}/fichier`)).blob(),
+}
+
+/** Enregistre l'ordre global des pages et des quiz du cours. */
+export const reorganiserDeroule = async (
+  idCours: number,
+  ordre: ElementOrdre[],
+) => {
+  const reponse = await requete(
+    `/cours/${idCours}/deroule`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ordre }),
+    },
+    "errors:route.description",
+  )
+
+  return (await reponse.json()) as {
+    ordre: Array<ElementOrdre & { position: number }>
+  }
 }

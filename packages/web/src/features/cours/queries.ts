@@ -1,7 +1,16 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { ImportCoursSaisie } from "@razzia/web/features/cours/types"
-import { coursHttp } from "@razzia/web/features/cours/api/http"
-import { coursMock } from "@razzia/web/features/cours/api/mock"
+import type {
+  ElementOrdre,
+  ImportCoursSaisie,
+} from "@razzia/web/features/cours/types"
+import {
+  coursHttp,
+  reorganiserDeroule as reorganiserDerouleHttp,
+} from "@razzia/web/features/cours/api/http"
+import {
+  coursMock,
+  reorganiserDerouleMock,
+} from "@razzia/web/features/cours/api/mock"
 
 /** Vraies routes /api/cours par défaut ; VITE_API_MOCK=true repasse sur le mock IndexedDB (démo sans back). */
 export const API_COURS_MOCK = import.meta.env.VITE_API_MOCK === "true"
@@ -35,3 +44,9 @@ export const fichierCoursQuery = (idCours: number, numero: number) =>
   })
 
 export const importerCours = (saisie: ImportCoursSaisie) => source.creer(saisie)
+
+/** Enregistre l'ordre du déroulé dans l'API réelle ou dans le mock IndexedDB. */
+export const reorganiserDeroule = (idCours: number, ordre: ElementOrdre[]) =>
+  API_COURS_MOCK
+    ? reorganiserDerouleMock(idCours, ordre)
+    : reorganiserDerouleHttp(idCours, ordre)

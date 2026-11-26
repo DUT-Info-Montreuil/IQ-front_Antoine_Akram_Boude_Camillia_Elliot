@@ -1,16 +1,19 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ChevronLeft, Play, Plus } from "lucide-react"
 import { type ReactNode, useEffect, useRef } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import type { ElementOrdre } from "@razzia/web/features/cours/types"
 import plume from "@razzia/web/assets/iq/plume.png"
 import Skeleton from "@razzia/web/components/Skeleton"
 import DerouleCours from "@razzia/web/features/cours/components/DerouleCours"
 import {
   API_COURS_MOCK,
+  coursKeys,
   coursQuery,
   fichierCoursQuery,
+  reorganiserDeroule,
 } from "@razzia/web/features/cours/queries"
 import { bouton } from "@razzia/web/features/cours/ui"
 import { formaterDuree } from "@razzia/web/features/quiz/validation"
@@ -36,11 +39,29 @@ const CoursEditeurPage = () => {
   const valide = Number.isInteger(idCours) && idCours > 0
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
 
   const cours = useQuery({ ...coursQuery(idCours), enabled: valide })
   const fichier = useQuery({
     ...fichierCoursQuery(idCours, cours.data?.versionCourante ?? 0),
     enabled: Boolean(cours.data),
+  })
+
+  const mutationReorganiser = useMutation({
+    mutationFn: (ordre: ElementOrdre[]) => reorganiserDeroule(idCours, ordre),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: coursKeys.detail(idCours),
+      })
+    },
+    onError: async (erreur: unknown) => {
+      toast.error(
+        t(erreur instanceof ApiError ? erreur.key : "errors:route.description"),
+      )
+      await queryClient.invalidateQueries({
+        queryKey: coursKeys.detail(idCours),
+      })
+    },
   })
 
   const version = cours.data?.versions.find(
@@ -145,8 +166,10 @@ const CoursEditeurPage = () => {
             <DerouleCours
               fichier={fichier.data}
               deroule={cours.data.deroule}
+              ordreInitial={cours.data.ordre}
               onInserer={insererQuiz}
               onOuvrirQuiz={modifierQuiz}
+              onReorganiser={(ordre) => mutationReorganiser.mutate(ordre)}
             />
           ) : (
             <div className="flex flex-wrap gap-6">
