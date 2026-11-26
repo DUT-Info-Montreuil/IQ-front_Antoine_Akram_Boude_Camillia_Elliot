@@ -135,6 +135,126 @@ describe("quizzValidator", () => {
   })
 })
 
+describe("quizzValidator, QCM avec barème (SCRUM-13)", () => {
+  const qcm = (overrides: Partial<Question> = {}) =>
+    choiceQuestion({
+      type: QUESTION_TYPES.MULTI,
+      answers: ["A", "B", "C"],
+      solutions: [0, 2],
+      maxPoints: 10,
+      answerPoints: [5, 0, 5],
+      ...overrides,
+    })
+
+  it("accepte deux propositions et une bonne réponse", () => {
+    expect(
+      issues(
+        quizz([
+          qcm({ answers: ["A", "B"], solutions: [0], answerPoints: [10, 0] }),
+        ]),
+      ),
+    ).toEqual([])
+  })
+
+  it("accepte plusieurs bonnes réponses dont la somme vaut maxPoints", () => {
+    expect(issues(quizz([qcm()]))).toEqual([])
+  })
+
+  it.each([
+    ["l'énoncé est vide", { question: "" }, "errors:quizz.questionEmpty"],
+    [
+      "l'énoncé n'a que des espaces",
+      { question: "   " },
+      "errors:quizz.questionEmpty",
+    ],
+    [
+      "une proposition est vide",
+      { answers: ["A", "", "C"] },
+      "errors:quizz.answerEmpty",
+    ],
+    [
+      "une proposition n'a que des espaces",
+      { answers: ["A", "  ", "C"] },
+      "errors:quizz.answerEmpty",
+    ],
+    [
+      "il y a moins de deux propositions",
+      { answers: ["A"], solutions: [0], answerPoints: [5] },
+      "errors:quizz.tooFewAnswers",
+    ],
+    [
+      "aucune bonne réponse",
+      { solutions: [], answerPoints: [0, 0, 0] },
+      "errors:quizz.noSolution",
+    ],
+    [
+      "un indice est négatif",
+      { solutions: [-1] },
+      "errors:quizz.invalidSolution",
+    ],
+    [
+      "un indice n'est pas entier",
+      { solutions: [0.5] },
+      "errors:quizz.invalidSolution",
+    ],
+    [
+      "un indice est hors limites",
+      { solutions: [0, 3] },
+      "errors:quizz.invalidSolution",
+    ],
+    [
+      "answerPoints n'a pas la bonne longueur",
+      { answerPoints: [5, 0] },
+      "errors:quizz.answerPointsLength",
+    ],
+    [
+      "des points sont négatifs",
+      { answerPoints: [5, -1, 5] },
+      "Too small: expected number to be >=0",
+    ],
+    [
+      "une mauvaise réponse a des points",
+      { answerPoints: [5, 1, 4] },
+      "errors:quizz.wrongAnswerWithPoints",
+    ],
+    [
+      "une bonne réponse a 0 point",
+      { answerPoints: [10, 0, 0] },
+      "errors:quizz.correctAnswerNoPoints",
+    ],
+    [
+      "la somme des bonnes réponses dépasse maxPoints",
+      { answerPoints: [6, 0, 5] },
+      "errors:quizz.pointsAboveMax",
+    ],
+  ] as Array<[string, Partial<Question>, string]>)(
+    "refuse si %s",
+    (_, overrides, message) => {
+      expect(issues(quizz([qcm(overrides)]))).toContain(message)
+    },
+  )
+
+  it("refuse des points non entiers", () => {
+    expect(
+      quizzValidator.safeParse(quizz([qcm({ answerPoints: [5, 0, 4.5] })]))
+        .success,
+    ).toBe(false)
+  })
+
+  it("compare la somme à 1000 points quand maxPoints est absent", () => {
+    expect(
+      issues(
+        quizz([qcm({ maxPoints: undefined, answerPoints: [500, 0, 500] })]),
+      ),
+    ).toEqual([])
+    expect(
+      issues(
+        quizz([qcm({ maxPoints: undefined, answerPoints: [600, 0, 500] })]),
+      ),
+    ).toContain("errors:quizz.pointsAboveMax")
+  })
+})
+
 describe("questionMediaValidator", () => {
   it.each(["/media/picture.png", "https://example.com/picture.png"])(
     "accepts %s",

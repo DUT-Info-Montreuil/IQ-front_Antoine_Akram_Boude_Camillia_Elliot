@@ -164,6 +164,15 @@ const controlerQcm = (question: QuestionSaisie, ajouter: Ajouter) => {
       )
     }
   })
+
+  const bonnes = propositions.filter((p) => p.estCorrecte)
+  const sommeBonnes = bonnes.reduce((somme, p) => somme + p.points, 0)
+
+  // Un sans-faute rapporte la somme des bonnes réponses : au plus pointsMax.
+  // Un point déjà au-dessus du maximum a son propre message.
+  if (sommeBonnes > pointsMax && bonnes.every((p) => p.points <= pointsMax)) {
+    ajouter(["propositions"], "errors:quiz.sommePointsSuperieureMax")
+  }
 }
 
 /** Points à relier : au moins 2 paires complètes, sans élément en double. */
@@ -280,11 +289,16 @@ export const questionSchema = z
       z.object({
         libelle: z.string(),
         estCorrecte: z.boolean(),
-        points: z.number(),
+        points: z.number("errors:quiz.pointsEntiers"),
       }),
     ),
     paires: z.array(z.object({ gauche: z.string(), droite: z.string() })),
-    expressions: z.array(z.object({ motif: z.string(), points: z.number() })),
+    expressions: z.array(
+      z.object({
+        motif: z.string(),
+        points: z.number("errors:quiz.pointsEntiers"),
+      }),
+    ),
     options: z.object({
       delaiLecture: z.number(),
       penalite: z.number(),

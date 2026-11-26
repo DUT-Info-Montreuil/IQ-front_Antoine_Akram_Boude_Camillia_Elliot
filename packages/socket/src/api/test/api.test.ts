@@ -235,6 +235,52 @@ describe("manager routes", () => {
     expect(response.status).toBe(StatusCodes.BAD_REQUEST)
     expect(await json(response)).toEqual({ error: "errors:quizz.noQuestions" })
   })
+
+  it("refuse un barème QCM au-dessus de maxPoints, en création comme en modification", async () => {
+    const qcm = (answerPoints: number[]) =>
+      createQuizz([
+        createQuestion({
+          answers: ["A", "B", "C"],
+          solutions: [0, 2],
+          maxPoints: 10,
+          answerPoints,
+        }),
+      ])
+    const tooMany = { error: "errors:quizz.pointsAboveMax" }
+
+    const refused = await request("/quizz", {
+      method: "POST",
+      token: managerToken,
+      body: qcm([6, 0, 5]),
+    })
+
+    expect(refused.status).toBe(StatusCodes.BAD_REQUEST)
+    expect(await json(refused)).toEqual(tooMany)
+
+    const created = await request("/quizz", {
+      method: "POST",
+      token: managerToken,
+      body: qcm([5, 0, 5]),
+    })
+
+    expect(created.status).toBe(StatusCodes.CREATED)
+
+    const { id } = await json<{ id: string }>(created)
+    const updated = await request(`/quizz/${id}`, {
+      method: "PATCH",
+      token: managerToken,
+      body: qcm([6, 0, 5]),
+    })
+
+    expect(updated.status).toBe(StatusCodes.BAD_REQUEST)
+    expect(await json(updated)).toEqual(tooMany)
+
+    const stored = await request(`/quizz/${id}`, { token: managerToken })
+
+    expect(await json(stored)).toMatchObject({
+      questions: [{ answerPoints: [5, 0, 5] }],
+    })
+  })
 })
 
 describe("games", () => {
