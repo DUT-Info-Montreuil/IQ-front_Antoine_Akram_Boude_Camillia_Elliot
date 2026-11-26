@@ -20,6 +20,12 @@ import useScreenSize from "@razzia/web/hooks/useScreenSize"
 // Tailwind sm breakpoint
 const MOBILE_BREAKPOINT = 640
 
+// IQ (SCRUM-28) : refus définitifs, après lesquels on ne peut pas renvoyer.
+const REFUS_DEFINITIFS = new Set([
+  "errors:reponse.tempsEcoule",
+  "errors:reponse.dejaEnregistree",
+])
+
 interface Props {
   data: CommonStatusDataMap["SELECT_ANSWER"]
 }
@@ -42,6 +48,9 @@ const Answers = ({
 
   const [cooldown, setCooldown] = useState(time)
   const [totalAnswer, setTotalAnswer] = useState(0)
+  // IQ : la réponse est écrite en base avant l'accusé WAIT, on bloque donc
+  // les boutons dès l'envoi pour éviter un double clic.
+  const [envoyee, setEnvoyee] = useState(false)
   const { t } = useTranslation()
   const { width } = useScreenSize()
 
@@ -62,10 +71,11 @@ const Answers = ({
   })
 
   const handleSubmit = (answerKeys: number[]) => {
-    if (!player || !gameId) {
+    if (!player || !gameId || envoyee) {
       return
     }
 
+    setEnvoyee(true)
     socket.emit(EVENTS.PLAYER.SELECTED_ANSWER, {
       gameId,
       data: {
@@ -95,6 +105,13 @@ const Answers = ({
 
   useEvent(EVENTS.GAME.COOLDOWN, (sec) => {
     setCooldown(sec)
+  })
+
+  // Le toast est affiché par GameWrapper ; on laisse réessayer sauf refus définitif.
+  useEvent(EVENTS.GAME.ERROR_MESSAGE, (cle) => {
+    if (!REFUS_DEFINITIFS.has(cle)) {
+      setEnvoyee(false)
+    }
   })
 
   useEvent(EVENTS.GAME.PLAYER_ANSWER, (count) => {
@@ -176,7 +193,7 @@ const Answers = ({
               correctAnswersCount={correctAnswersCount}
               options={options}
               onSubmit={handleSubmit}
-              readOnly={!player}
+              readOnly={!player || envoyee}
               fill={showAnswersOnly}
           />
         </div>

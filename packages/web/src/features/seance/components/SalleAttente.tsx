@@ -67,6 +67,12 @@ const SalleAttente = ({
     enabled: Boolean(contexte.quiz),
   })
 
+  // Étudiants inscrits d'office (quiz suivant de la séance) avant l'affichage
+  // de la salle : la reconnexion du gestionnaire renvoie la liste complète.
+  useEvent(EVENTS.MANAGER.SUCCESS_RECONNECT, ({ players: inscrits }) => {
+    setJoueurs(inscrits)
+  })
+
   // Mêmes événements que la salle d'attente de Razzia (features/game/.../Room).
   useEvent(EVENTS.MANAGER.NEW_PLAYER, (joueur) => {
     setJoueurs((liste) => [...liste, joueur])

@@ -171,7 +171,14 @@ const ManagerGamePage = () => {
 export const Route = createFileRoute("/party/manager/$gameId")({
   validateSearch: contexteSeanceSchema,
   component: ManagerGamePage,
-  onLeave: ({ params: { gameId } }) => {
+  onLeave: ({ params: { gameId }, search }) => {
+    // IQ : dans une séance, le serveur ferme la partie à l'ouverture du quiz
+    // suivant (en y inscrivant d'office les joueurs) ou à la fin de la séance.
+    // Quitter la partie ici renverrait les étudiants à l'accueil.
+    if (search.seance) {
+      return
+    }
+
     socketClient.emit(EVENTS.MANAGER.LEAVE, { gameId })
   },
 })
