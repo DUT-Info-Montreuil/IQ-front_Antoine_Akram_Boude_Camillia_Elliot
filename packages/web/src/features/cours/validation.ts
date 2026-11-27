@@ -54,6 +54,18 @@ export const importCoursSchema = z.object({
 
 export type ImportCoursChamps = z.input<typeof importCoursSchema>
 
+export type ChampImport = "fichier" | "titre" | "codeRessource"
+
+const CHAMP_PAR_ERREUR: Partial<Record<string, ChampImport>> = {
+  "errors:cours.titreVide": "titre",
+  "errors:cours.titreTropLong": "titre",
+  "errors:cours.codeRessourceTropLong": "codeRessource",
+}
+
+/** Champ du formulaire d'import sous lequel afficher une erreur renvoyée par l'API. */
+export const champDeLErreur = (cle: string): ChampImport =>
+  CHAMP_PAR_ERREUR[cle] ?? "fichier"
+
 /** Titre proposé à partir du nom du fichier (« R5.A.10_cours.pdf » → « R5.A.10 cours »). */
 export const titreDepuisNomFichier = (nom: string) =>
   nom

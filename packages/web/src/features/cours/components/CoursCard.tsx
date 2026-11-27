@@ -19,13 +19,16 @@ const useDateModification = () => {
 
   return (iso: string) => {
     const date = new Date(iso)
-    const ecart = debutDuJour(new Date()) - debutDuJour(date)
+    // Arrondi : un jour de changement d'heure dure 23 h ou 25 h.
+    const jours = Math.round(
+      (debutDuJour(new Date()) - debutDuJour(date)) / JOUR_MS,
+    )
 
-    if (ecart <= 0) {
+    if (jours <= 0) {
       return t("manager:cours.modifieAujourdhui")
     }
 
-    if (ecart <= JOUR_MS) {
+    if (jours === 1) {
       return t("manager:cours.modifieHier")
     }
 

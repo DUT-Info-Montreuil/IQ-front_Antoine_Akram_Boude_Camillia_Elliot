@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  champDeLErreur,
   importCoursSchema,
   PDF_TAILLE_MAX_OCTETS,
   titreDepuisNomFichier,
@@ -65,5 +66,20 @@ describe("titreDepuisNomFichier", () => {
     expect(titreDepuisNomFichier("R5.A.10_cours-nosql.pdf")).toBe(
       "R5.A.10 cours nosql",
     )
+  })
+})
+
+describe("champDeLErreur", () => {
+  it("range les erreurs de titre et de code sous leur champ", () => {
+    expect(champDeLErreur("errors:cours.titreVide")).toBe("titre")
+    expect(champDeLErreur("errors:cours.titreTropLong")).toBe("titre")
+    expect(champDeLErreur("errors:cours.codeRessourceTropLong")).toBe(
+      "codeRessource",
+    )
+  })
+
+  it("range les autres erreurs sous le fichier", () => {
+    expect(champDeLErreur("errors:cours.pasUnPdf")).toBe("fichier")
+    expect(champDeLErreur("errors:api.serverError")).toBe("fichier")
   })
 })

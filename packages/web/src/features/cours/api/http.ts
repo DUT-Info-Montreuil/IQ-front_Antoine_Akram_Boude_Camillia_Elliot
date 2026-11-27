@@ -1,4 +1,5 @@
 import { StatusCodes } from "http-status-codes"
+import i18n from "i18next"
 import type {
   CoursDetail,
   CoursResume,
@@ -8,6 +9,26 @@ import type {
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { ApiError } from "@razzia/web/lib/api"
 import { clearToken, ensureSession } from "@razzia/web/lib/session"
+
+/**
+ * Clé i18n d'une réponse en erreur : celle du corps `{ error }` renvoyé par
+ * l'API (PdfService, validateurs zod…) quand le front sait la traduire,
+ * sinon une clé déduite du code HTTP. Sans ça, un 400 sur le titre
+ * s'affichait « Ce fichier n'est pas un PDF ».
+ */
+const lireCleErreur = async (reponse: Response, repli: string) => {
+  const parStatut = cleErreurCours(reponse.status, repli)
+
+  try {
+    const corps = (await reponse.json()) as { error?: unknown }
+
+    return typeof corps.error === "string" && i18n.exists(corps.error)
+      ? corps.error
+      : parStatut
+  } catch {
+    return parStatut
+  }
+}
 
 /**
  * Appels réels aux routes /api/cours du dossier de conception (tableau 27).
@@ -33,7 +54,7 @@ export const requete = async (
   }
 
   if (!reponse.ok) {
-    throw new ApiError(reponse.status, cleErreurCours(reponse.status, repli))
+    throw new ApiError(reponse.status, await lireCleErreur(reponse, repli))
   }
 
   return reponse

@@ -18,6 +18,7 @@ import { analyserPdf } from "@razzia/web/features/cours/pdf"
 import { coursKeys, importerCours } from "@razzia/web/features/cours/queries"
 import { bouton, champ } from "@razzia/web/features/cours/ui"
 import {
+  champDeLErreur,
   CODE_RESSOURCE_MAX,
   formaterTaille,
   importCoursSchema,
@@ -54,6 +55,9 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
   const [survol, setSurvol] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const selectionRef = useRef(0)
+  // Dernier titre proposé à partir d'un nom de fichier, pour le remplacer
+  // quand on change de fichier sans l'avoir retouché.
+  const titreProposeRef = useRef("")
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -64,6 +68,7 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
 
   const reinitialiser = () => {
     selectionRef.current += 1
+    titreProposeRef.current = ""
     setFichier(null)
     setVerification(null)
     setTitre("")
@@ -89,7 +94,8 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
       const cle =
         error instanceof ApiError ? error.key : "errors:cours.importEchoue"
 
-      setErreurs((e) => ({ ...e, fichier: cle }))
+      // Les erreurs de titre ou de code renvoyées par l'API vont sous leur champ.
+      setErreurs((e) => ({ ...e, [champDeLErreur(cle)]: cle }))
     },
   })
 
@@ -100,13 +106,17 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
 
     const erreur = validerFichierPdf(choisi)
 
+    // Le nouveau choix remplace toujours le précédent : un fichier refusé ne
+    // laisse pas l'ancien en place (sinon c'est lui qui partirait à l'envoi).
+    selectionRef.current += 1
+
     if (erreur) {
+      setFichier(null)
+      setVerification(null)
       setErreurs((e) => ({ ...e, fichier: erreur }))
 
       return
     }
-
-    selectionRef.current += 1
 
     const selection = selectionRef.current
 
@@ -114,8 +124,11 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
     setVerification({ etat: "en-cours" })
     setErreurs((e) => ({ ...e, fichier: undefined }))
 
-    if (!titre.trim()) {
-      setTitre(titreDepuisNomFichier(choisi.name))
+    if (!titre.trim() || titre === titreProposeRef.current) {
+      const propose = titreDepuisNomFichier(choisi.name)
+
+      titreProposeRef.current = propose
+      setTitre(propose)
       setErreurs((e) => ({ ...e, titre: undefined }))
     }
 
@@ -259,7 +272,15 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
                 e.preventDefault()
                 setSurvol(true)
               }}
-              onDragLeave={() => setSurvol(false)}
+              onDragLeave={(e) => {
+                // Le dragleave part aussi en passant sur un élément enfant.
+                if (
+                  !(e.relatedTarget instanceof Node) ||
+                  !e.currentTarget.contains(e.relatedTarget)
+                ) {
+                  setSurvol(false)
+                }
+              }}
             >
               <span className="flex size-16 items-center justify-center rounded-2xl bg-iq-sauge/40 text-iq-foret">
                 <FileUp className="size-7" />
