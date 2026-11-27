@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ChevronLeft, Play, Plus } from "lucide-react"
 import { type ReactNode, useEffect, useRef } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import type { ElementOrdre } from "@razzia/web/features/cours/types"
 import plume from "@razzia/web/assets/iq/plume.png"
 import Skeleton from "@razzia/web/components/Skeleton"
 import DerouleCours from "@razzia/web/features/cours/components/DerouleCours"
+import { notifier } from "@razzia/web/features/cours/notifications"
 import {
   API_COURS_MOCK,
   coursKeys,
@@ -55,9 +55,12 @@ const CoursEditeurPage = () => {
       })
     },
     onError: async (erreur: unknown) => {
-      toast.error(
-        t(erreur instanceof ApiError ? erreur.key : "errors:route.description"),
-      )
+      notifier.erreur({
+        titre: t(
+          erreur instanceof ApiError ? erreur.key : "errors:route.description",
+        ),
+        description: t("manager:cours.derouleRestaure"),
+      })
       await queryClient.invalidateQueries({
         queryKey: coursKeys.detail(idCours),
       })
@@ -97,9 +100,12 @@ const CoursEditeurPage = () => {
     }
 
     aNotifieRef.current = true
-    toast.error(
-      t(erreur instanceof ApiError ? erreur.key : "errors:cours.introuvable"),
-    )
+    notifier.erreur({
+      titre: t(
+        erreur instanceof ApiError ? erreur.key : "errors:cours.introuvable",
+      ),
+      description: t("manager:cours.retourMesCours"),
+    })
     navigate({ to: "/manager/cours" })
   }, [erreur, valide, navigate, t])
 

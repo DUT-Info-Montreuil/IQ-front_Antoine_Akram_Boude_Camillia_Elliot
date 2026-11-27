@@ -1,11 +1,13 @@
 import "@fontsource-variable/montserrat/wght.css"
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { SESSION_ROLES } from "@razzia/common/constants"
+import IqToaster from "@razzia/web/features/cours/components/IqToaster"
 import { getRole } from "@razzia/web/lib/session"
 
 const CoursLayout = () => (
   <div className="min-h-svh bg-iq-fond font-iq text-iq-texte antialiased">
     <Outlet />
+    <IqToaster />
   </div>
 )
 

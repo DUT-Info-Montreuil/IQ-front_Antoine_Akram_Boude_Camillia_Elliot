@@ -103,7 +103,20 @@
     "resumeQuiz": "{{nb}} question(s) · {{duree}}",
     "derouleAideQuiz": "Cliquez sur un + entre deux pages pour y glisser un quiz.",
     "questions": "questions",
-    "deQuizEnTout": "de quiz en tout"
+    "deQuizEnTout": "de quiz en tout",
+    "importReussi": "PDF importé avec succès",
+    "importReussiDetail": "« {{titre}} » · {{nb}} page(s), prêt à recevoir vos quiz",
+    "envoiPdf": "Envoi du PDF... {{pct}} %",
+    "enregistrementCours": "Enregistrement du cours...",
+    "relacher": "Relâchez pour déposer votre PDF",
+    "aideFichierManquant": "Glissez un PDF dans la zone ci-dessus, ou cliquez sur « parcourez vos fichiers ».",
+    "aidePasUnPdf": "Seuls les fichiers PDF sont acceptés. Exportez votre support en PDF depuis votre logiciel de présentation, puis réessayez.",
+    "aideTropVolumineux": "Compressez le PDF (images en qualité « web ») ou découpez-le en plusieurs cours de moins de {{max}} Mo.",
+    "aidePdfIllisible": "Retirez le mot de passe du PDF, ou exportez-le de nouveau depuis le document d'origine.",
+    "aideConnexion": "Votre session a peut-être expiré : reconnectez-vous, puis relancez l'import.",
+    "aideReessayer": "Vérifiez votre connexion, puis relancez l'import. Rien n'a été enregistré.",
+    "derouleRestaure": "Le déroulé a été remis dans son dernier état enregistré.",
+    "retourMesCours": "Retour à la liste de vos cours."
   },
   "seance": {
     "ouvrirQuiz": "Ouvrir un quiz",

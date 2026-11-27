@@ -3,6 +3,7 @@ import type {
   CoursDetail,
   CoursSource,
   ElementOrdre,
+  SuiviImport,
 } from "@razzia/web/features/cours/types"
 import type { Quiz } from "@razzia/web/features/quiz/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
@@ -29,6 +30,8 @@ const STORE_FICHIERS = "fichiers"
 export const STORE_QUIZ = "quiz"
 
 const LATENCE_MS = 300
+
+const PALIERS_ENVOI = 6
 
 /** Enseignant simulé, en attendant l'authentification LDAP (CU 1.1). */
 export const UTILISATEUR_MOCK = {
@@ -113,6 +116,20 @@ const resume = ({
   ...cours
 }: CoursDetail) => cours
 
+/** Envoi simulé par paliers, pour que la barre de progression vive comme avec le vrai serveur. */
+const simulerEnvoi = async (suivi?: SuiviImport, palier = 1): Promise<void> => {
+  if (palier > PALIERS_ENVOI) {
+    return
+  }
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, LATENCE_MS / PALIERS_ENVOI)
+  })
+  suivi?.({ etape: "envoi", ratio: palier / PALIERS_ENVOI })
+
+  await simulerEnvoi(suivi, palier + 1)
+}
+
 export const coursMock: CoursSource = {
   lister: async () => {
     await patienter()
@@ -138,7 +155,9 @@ export const coursMock: CoursSource = {
     return cours
   },
 
-  creer: async ({ fichier, titre, codeRessource }) => {
+  creer: async ({ fichier, titre, codeRessource }, suivi) => {
+    await simulerEnvoi(suivi)
+    suivi?.({ etape: "enregistrement" })
     await patienter()
 
     if (fichier.size > PDF_TAILLE_MAX_OCTETS) {

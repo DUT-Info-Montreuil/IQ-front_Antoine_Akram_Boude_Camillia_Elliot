@@ -66,6 +66,19 @@ const CHAMP_PAR_ERREUR: Partial<Record<string, ChampImport>> = {
 export const champDeLErreur = (cle: string): ChampImport =>
   CHAMP_PAR_ERREUR[cle] ?? "fichier"
 
+const AIDE_PAR_ERREUR: Partial<Record<string, string>> = {
+  "errors:cours.fichierManquant": "manager:cours.aideFichierManquant",
+  "errors:cours.pasUnPdf": "manager:cours.aidePasUnPdf",
+  "errors:cours.tropVolumineux": "manager:cours.aideTropVolumineux",
+  "errors:cours.pdfIllisible": "manager:cours.aidePdfIllisible",
+  "errors:cours.accesRefuse": "manager:cours.aideConnexion",
+  "errors:auth.unauthorized": "manager:cours.aideConnexion",
+}
+
+/** Conseil affiché sous une erreur de fichier : ce que l'enseignant peut faire. */
+export const aideErreurImport = (cle: string) =>
+  AIDE_PAR_ERREUR[cle] ?? "manager:cours.aideReessayer"
+
 /** Titre proposé à partir du nom du fichier (« R5.A.10_cours.pdf » → « R5.A.10 cours »). */
 export const titreDepuisNomFichier = (nom: string) =>
   nom

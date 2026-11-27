@@ -5,6 +5,7 @@ import type {
   CoursResume,
   CoursSource,
   ElementOrdre,
+  SuiviImport,
 } from "@razzia/web/features/cours/types"
 import { cleErreurCours } from "@razzia/web/features/cours/api/erreurs"
 import { ApiError } from "@razzia/web/lib/api"
@@ -16,11 +17,11 @@ import { clearToken, ensureSession } from "@razzia/web/lib/session"
  * sinon une clé déduite du code HTTP. Sans ça, un 400 sur le titre
  * s'affichait « Ce fichier n'est pas un PDF ».
  */
-const lireCleErreur = async (reponse: Response, repli: string) => {
-  const parStatut = cleErreurCours(reponse.status, repli)
+const cleDepuisCorps = (texte: string, status: number, repli: string) => {
+  const parStatut = cleErreurCours(status, repli)
 
   try {
-    const corps = (await reponse.json()) as { error?: unknown }
+    const corps = JSON.parse(texte) as { error?: unknown }
 
     return typeof corps.error === "string" && i18n.exists(corps.error)
       ? corps.error
@@ -54,10 +55,64 @@ export const requete = async (
   }
 
   if (!reponse.ok) {
-    throw new ApiError(reponse.status, await lireCleErreur(reponse, repli))
+    throw new ApiError(
+      reponse.status,
+      cleDepuisCorps(await reponse.text(), reponse.status, repli),
+    )
   }
 
   return reponse
+}
+
+interface Envoi {
+  chemin: string
+  corps: FormData
+  suivi?: SuiviImport
+}
+
+/**
+ * POST multipart avec suivi de l'envoi : fetch ne donne pas l'avancement
+ * d'un upload, XMLHttpRequest si. Mêmes règles d'erreur que `requete`.
+ */
+const envoyerAvecSuivi = async ({ chemin, corps, suivi }: Envoi) => {
+  const { token } = await ensureSession()
+
+  const xhr = await new Promise<XMLHttpRequest>((resolve, reject) => {
+    const envoi = new XMLHttpRequest()
+
+    envoi.open("POST", `/api${chemin}`)
+    envoi.setRequestHeader("Authorization", `Bearer ${token}`)
+    envoi.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        suivi?.({ etape: "envoi", ratio: e.loaded / e.total })
+      }
+    })
+    // Fichier parti : le serveur l'analyse et l'enregistre.
+    envoi.upload.addEventListener("load", () =>
+      suivi?.({ etape: "enregistrement" }),
+    )
+    envoi.addEventListener("load", () => resolve(envoi))
+    envoi.addEventListener("error", () => reject(new Error("Réseau")))
+    envoi.addEventListener("abort", () => reject(new Error("Annulé")))
+    envoi.send(corps)
+  })
+
+  const status: StatusCodes = xhr.status
+
+  if (status === StatusCodes.UNAUTHORIZED) {
+    clearToken()
+
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "errors:auth.unauthorized")
+  }
+
+  if (xhr.status < 200 || xhr.status >= 300) {
+    throw new ApiError(
+      xhr.status,
+      cleDepuisCorps(xhr.responseText, xhr.status, "errors:cours.importEchoue"),
+    )
+  }
+
+  return JSON.parse(xhr.responseText) as unknown
 }
 
 export const coursHttp: CoursSource = {
@@ -66,7 +121,7 @@ export const coursHttp: CoursSource = {
   obtenir: async (idCours) =>
     (await (await requete(`/cours/${idCours}`)).json()) as CoursDetail,
 
-  creer: async ({ fichier, titre, codeRessource }) => {
+  creer: async ({ fichier, titre, codeRessource }, suivi) => {
     const form = new FormData()
 
     form.append("fichier", fichier)
@@ -76,13 +131,11 @@ export const coursHttp: CoursSource = {
       form.append("codeRessource", codeRessource)
     }
 
-    const reponse = await requete(
-      "/cours",
-      { method: "POST", body: form },
-      "errors:cours.importEchoue",
-    )
-
-    return (await reponse.json()) as CoursDetail
+    return (await envoyerAvecSuivi({
+      chemin: "/cours",
+      corps: form,
+      suivi,
+    })) as CoursDetail
   },
 
   lireFichier: async (idCours, numero) =>

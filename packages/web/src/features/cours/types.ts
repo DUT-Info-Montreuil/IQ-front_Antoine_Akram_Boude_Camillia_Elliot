@@ -55,10 +55,20 @@ export interface ImportCoursSaisie {
   codeRessource?: string
 }
 
+/** Avancement de POST /api/cours : envoi du fichier, puis traitement par le serveur. */
+export type ProgressionImport =
+  | { etape: "envoi"; ratio: number }
+  | { etape: "enregistrement" }
+
+export type SuiviImport = (progression: ProgressionImport) => void
+
 /** Contrat commun à l'implémentation HTTP et au mock. */
 export interface CoursSource {
   lister: () => Promise<CoursResume[]>
   obtenir: (idCours: number) => Promise<CoursDetail>
-  creer: (saisie: ImportCoursSaisie) => Promise<CoursDetail>
+  creer: (
+    saisie: ImportCoursSaisie,
+    suivi?: SuiviImport,
+  ) => Promise<CoursDetail>
   lireFichier: (idCours: number, numero: number) => Promise<Blob>
 }

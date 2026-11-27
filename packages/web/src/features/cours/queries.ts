@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query"
 import type {
   ElementOrdre,
   ImportCoursSaisie,
+  SuiviImport,
 } from "@razzia/web/features/cours/types"
 import {
   coursHttp,
@@ -43,7 +44,8 @@ export const fichierCoursQuery = (idCours: number, numero: number) =>
     staleTime: Infinity,
   })
 
-export const importerCours = (saisie: ImportCoursSaisie) => source.creer(saisie)
+export const importerCours = (saisie: ImportCoursSaisie, suivi?: SuiviImport) =>
+  source.creer(saisie, suivi)
 
 /** Enregistre l'ordre du déroulé dans l'API réelle ou dans le mock IndexedDB. */
 export const reorganiserDeroule = (idCours: number, ordre: ElementOrdre[]) =>

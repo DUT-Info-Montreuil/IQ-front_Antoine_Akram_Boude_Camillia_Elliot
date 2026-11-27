@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import clsx from "clsx"
-import { ArrowRight, FileUp, X } from "lucide-react"
+import { ArrowRight, Check, CircleCheck, FileUp, X } from "lucide-react"
+import { AnimatePresence, motion, MotionConfig } from "motion/react"
 import { Dialog } from "radix-ui"
 import {
   type ChangeEvent,
@@ -11,13 +12,24 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import type {
+  ImportCoursSaisie,
+  ProgressionImport,
+} from "@razzia/web/features/cours/types"
 import Loader from "@razzia/web/components/Loader"
+import {
+  BanniereErreur,
+  BarreProgression,
+  type EtatBarre,
+  SECOUSSE,
+} from "@razzia/web/features/cours/components/RetoursImport"
+import { notifier } from "@razzia/web/features/cours/notifications"
 import { analyserPdf } from "@razzia/web/features/cours/pdf"
 import { coursKeys, importerCours } from "@razzia/web/features/cours/queries"
 import { bouton, champ } from "@razzia/web/features/cours/ui"
 import {
+  aideErreurImport,
   champDeLErreur,
   CODE_RESSOURCE_MAX,
   formaterTaille,
@@ -45,13 +57,23 @@ interface Props {
   onOpenChange: (open: boolean) => void
 }
 
+const APPARITION = {
+  initial: { opacity: 0, height: 0 },
+  animate: { opacity: 1, height: "auto" },
+  exit: { opacity: 0, height: 0 },
+  transition: { duration: 0.24, ease: "easeOut" },
+} as const
+
 /** Modale « Importer un cours » (maquette E2, CU 1.2). */
 const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
   const [fichier, setFichier] = useState<File | null>(null)
   const [verification, setVerification] = useState<Verification | null>(null)
+  const [progression, setProgression] = useState<ProgressionImport | null>(null)
   const [titre, setTitre] = useState("")
   const [codeRessource, setCodeRessource] = useState("")
   const [erreurs, setErreurs] = useState<Erreurs>({})
+  // Compte les erreurs de fichier, pour rejouer l'animation à chaque refus.
+  const [essai, setEssai] = useState(0)
   const [survol, setSurvol] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const selectionRef = useRef(0)
@@ -66,11 +88,17 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
   const traduire = (cle?: string) =>
     cle ? t(cle, { max: PDF_TAILLE_MAX_MO }) : undefined
 
+  const signalerFichier = (cle: string) => {
+    setErreurs((e) => ({ ...e, fichier: cle }))
+    setEssai((n) => n + 1)
+  }
+
   const reinitialiser = () => {
     selectionRef.current += 1
     titreProposeRef.current = ""
     setFichier(null)
     setVerification(null)
+    setProgression(null)
     setTitre("")
     setCodeRessource("")
     setErreurs({})
@@ -78,11 +106,19 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
   }
 
   const { mutate, isPending } = useMutation({
-    mutationFn: importerCours,
+    mutationFn: (saisie: ImportCoursSaisie) =>
+      importerCours(saisie, setProgression),
+    onMutate: () => setProgression({ etape: "envoi", ratio: 0 }),
     onSuccess: (cours) => {
       queryClient.invalidateQueries({ queryKey: coursKeys.all })
       queryClient.setQueryData(coursKeys.detail(cours.id), cours)
-      toast.success(t("manager:cours.importe"))
+      notifier.succes({
+        titre: t("manager:cours.importReussi"),
+        description: t("manager:cours.importReussiDetail", {
+          titre: cours.titre,
+          nb: cours.nbPages,
+        }),
+      })
       onOpenChange(false)
       reinitialiser()
       navigate({
@@ -93,9 +129,16 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
     onError: (error) => {
       const cle =
         error instanceof ApiError ? error.key : "errors:cours.importEchoue"
+      const champErreur = champDeLErreur(cle)
+
+      setProgression(null)
 
       // Les erreurs de titre ou de code renvoyées par l'API vont sous leur champ.
-      setErreurs((e) => ({ ...e, [champDeLErreur(cle)]: cle }))
+      if (champErreur === "fichier") {
+        signalerFichier(cle)
+      } else {
+        setErreurs((e) => ({ ...e, [champErreur]: cle }))
+      }
     },
   })
 
@@ -113,7 +156,7 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
     if (erreur) {
       setFichier(null)
       setVerification(null)
-      setErreurs((e) => ({ ...e, fichier: erreur }))
+      signalerFichier(erreur)
 
       return
     }
@@ -143,7 +186,7 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
       setVerification({ etat: "ok", nbPages: analyse.nbPages })
     } else {
       setVerification({ etat: "refuse" })
-      setErreurs((e) => ({ ...e, fichier: analyse.erreur }))
+      signalerFichier(analyse.erreur)
     }
   }
 
@@ -187,6 +230,10 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
 
     setErreurs(suivantes)
 
+    if (erreurFichier) {
+      setEssai((n) => n + 1)
+    }
+
     if (
       erreurFichier ||
       !champs.success ||
@@ -212,18 +259,32 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
   }
 
   const enCours = isPending || verification?.etat === "en-cours"
+  const pourcentage =
+    progression?.etape === "envoi" ? Math.round(progression.ratio * 100) : null
 
-  const progression = () => {
-    if (enCours) {
-      return "w-2/3 animate-pulse"
+  const etatBarre = (): EtatBarre => {
+    if (progression?.etape === "envoi") {
+      return { type: "partiel", ratio: progression.ratio }
     }
 
-    return verification?.etat === "ok" ? "w-full" : "w-0"
+    if (progression?.etape === "enregistrement" || enCours) {
+      return { type: "indetermine" }
+    }
+
+    if (verification?.etat === "refuse") {
+      return { type: "refuse" }
+    }
+
+    return verification?.etat === "ok" ? { type: "complet" } : { type: "vide" }
   }
 
   const statutFichier = () => {
-    if (isPending) {
-      return t("manager:cours.importEnCours")
+    if (progression?.etape === "envoi") {
+      return t("manager:cours.envoiPdf", { pct: pourcentage })
+    }
+
+    if (progression?.etape === "enregistrement") {
+      return t("manager:cours.enregistrementCours")
     }
 
     if (verification?.etat === "ok") {
@@ -235,210 +296,316 @@ const ImportCoursDialog = ({ open, onOpenChange }: Props) => {
       : t("manager:cours.verificationEnCours")
   }
 
+  const verifie = verification?.etat === "ok" && !isPending
+
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-iq-foret/55 data-[state=open]:animate-fade" />
 
         <Dialog.Content
-          className="fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white font-iq text-iq-texte shadow-2xl"
+          className="fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white font-iq text-iq-texte shadow-2xl data-[state=open]:animate-fade-up data-[state=open]:animate-duration-300 data-[state=open]:animate-ease-out"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
+          // Un clic sur une notification IQ ne ferme pas la modale.
+          onPointerDownOutside={(e) => {
+            if (
+              e.target instanceof Element &&
+              e.target.closest("[data-iq-toaster]")
+            ) {
+              e.preventDefault()
+            }
+          }}
         >
-          <div className="flex items-center justify-between gap-4 bg-iq-foret px-9 py-6">
-            <Dialog.Title className="text-3xl font-extrabold text-iq-creme">
-              {t("manager:cours.importer")}
-            </Dialog.Title>
-            <Dialog.Close
-              className="flex size-12 items-center justify-center rounded-xl bg-iq-foret-clair text-iq-creme hover:brightness-125 disabled:opacity-50"
-              disabled={isPending}
-              title={t("common:close")}
-            >
-              <X className="size-5" />
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="sr-only">
-            {t("manager:cours.importDescription", { max: PDF_TAILLE_MAX_MO })}
-          </Dialog.Description>
-
-          <form className="flex flex-col gap-6 p-9" onSubmit={handleSubmit}>
-            <div
-              className={clsx(
-                "flex flex-col items-center justify-center gap-3 rounded-2xl border-[3px] border-dashed bg-iq-champ px-6 py-8 text-center transition-colors",
-                survol ? "border-iq-mousse bg-iq-sauge/20" : "border-iq-sauge",
-                erreurs.fichier && !fichier && "border-red-400",
-              )}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setSurvol(true)
-              }}
-              onDragLeave={(e) => {
-                // Le dragleave part aussi en passant sur un élément enfant.
-                if (
-                  !(e.relatedTarget instanceof Node) ||
-                  !e.currentTarget.contains(e.relatedTarget)
-                ) {
-                  setSurvol(false)
-                }
-              }}
-            >
-              <span className="flex size-16 items-center justify-center rounded-2xl bg-iq-sauge/40 text-iq-foret">
-                <FileUp className="size-7" />
-              </span>
-              <p className="text-lg font-bold">
-                {t("manager:cours.deposer")}{" "}
-                <button
-                  type="button"
-                  className="text-iq-olive underline underline-offset-2 hover:text-iq-mousse"
-                  onClick={() => inputRef.current?.click()}
-                  disabled={isPending}
-                >
-                  {t("manager:cours.parcourir")}
-                </button>
-              </p>
-              <p className="text-sm text-iq-gris">
-                {t("manager:cours.formatAccepte", { max: PDF_TAILLE_MAX_MO })}
-              </p>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="application/pdf,.pdf"
-                className="hidden"
-                aria-describedby={`${id}-fichier-erreur`}
-                onChange={handleChange}
-              />
-            </div>
-
-            {fichier && (
-              <div
-                className={clsx(
-                  "flex items-center gap-4 rounded-2xl border-2 p-4",
-                  verification?.etat === "refuse"
-                    ? "border-red-300 bg-red-50"
-                    : "border-iq-sauge bg-iq-sauge/25",
-                )}
+          <MotionConfig reducedMotion="user">
+            <div className="flex items-center justify-between gap-4 bg-iq-foret px-6 py-5 sm:px-9 sm:py-6">
+              <Dialog.Title className="text-2xl font-extrabold text-iq-creme sm:text-3xl">
+                {t("manager:cours.importer")}
+              </Dialog.Title>
+              <Dialog.Close
+                className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-iq-foret-clair text-iq-creme hover:brightness-125 disabled:opacity-50 sm:size-12"
+                disabled={isPending}
+                title={t("common:close")}
               >
-                <span className="flex h-14 w-12 shrink-0 items-center justify-center rounded-md bg-iq-olive text-xs font-extrabold text-white">
-                  PDF
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="truncate font-bold">{fichier.name}</p>
-                    {verification?.etat === "ok" && (
-                      <p className="shrink-0 font-extrabold text-iq-olive">
-                        {t("manager:cours.nbPages", {
-                          nb: verification.nbPages,
-                        })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="my-2 h-2 overflow-hidden rounded-full bg-white/70">
-                    <div
-                      className={clsx(
-                        "h-full rounded-full bg-[#2f7d3a] transition-all duration-500",
-                        progression(),
-                      )}
-                    />
-                  </div>
-                  <p className="text-sm text-iq-gris">
-                    {formaterTaille(fichier.size)} · {statutFichier()}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg p-2 text-iq-gris hover:bg-white/70 hover:text-iq-texte disabled:opacity-50"
-                  onClick={retirerFichier}
-                  disabled={isPending}
-                  title={t("manager:cours.retirerFichier")}
+                <X className="size-5" />
+              </Dialog.Close>
+            </div>
+            <Dialog.Description className="sr-only">
+              {t("manager:cours.importDescription", { max: PDF_TAILLE_MAX_MO })}
+            </Dialog.Description>
+
+            <form
+              className="flex flex-col gap-6 p-6 sm:p-9"
+              onSubmit={handleSubmit}
+            >
+              <div>
+                <div
+                  className={clsx(
+                    "flex flex-col items-center justify-center gap-3 rounded-2xl border-[3px] border-dashed bg-iq-champ px-6 py-8 text-center transition-colors duration-200",
+                    survol
+                      ? "border-iq-mousse bg-iq-sauge/20"
+                      : "border-iq-sauge",
+                    erreurs.fichier && !fichier && !survol && "border-red-300",
+                    isPending && "pointer-events-none opacity-60",
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setSurvol(true)
+                  }}
+                  onDragLeave={(e) => {
+                    // Le dragleave part aussi en passant sur un élément enfant.
+                    if (
+                      !(e.relatedTarget instanceof Node) ||
+                      !e.currentTarget.contains(e.relatedTarget)
+                    ) {
+                      setSurvol(false)
+                    }
+                  }}
                 >
-                  <X className="size-4" />
+                  <motion.span
+                    className="flex size-16 items-center justify-center rounded-2xl bg-iq-sauge/40 text-iq-foret"
+                    animate={
+                      survol ? { y: -5, scale: 1.08 } : { y: 0, scale: 1 }
+                    }
+                    transition={{ type: "spring", stiffness: 380, damping: 20 }}
+                  >
+                    <FileUp className="size-7" />
+                  </motion.span>
+                  <p className="text-lg font-bold">
+                    {survol ? (
+                      t("manager:cours.relacher")
+                    ) : (
+                      <>
+                        {t("manager:cours.deposer")}{" "}
+                        <button
+                          type="button"
+                          className="rounded text-iq-olive underline underline-offset-2 hover:text-iq-mousse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iq-mousse"
+                          onClick={() => inputRef.current?.click()}
+                          disabled={isPending}
+                        >
+                          {t("manager:cours.parcourir")}
+                        </button>
+                      </>
+                    )}
+                  </p>
+                  <p className="text-sm text-iq-gris">
+                    {t("manager:cours.formatAccepte", {
+                      max: PDF_TAILLE_MAX_MO,
+                    })}
+                  </p>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    aria-describedby={`${id}-fichier-erreur`}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <AnimatePresence initial={false}>
+                  {fichier && (
+                    <motion.div
+                      key={`${fichier.name}-${fichier.size}-${fichier.lastModified}`}
+                      {...APPARITION}
+                      className="overflow-hidden"
+                    >
+                      <motion.div
+                        key={verification?.etat === "refuse" ? essai : "ok"}
+                        animate={
+                          verification?.etat === "refuse" ? SECOUSSE : undefined
+                        }
+                        className={clsx(
+                          "mt-4 flex items-center gap-4 rounded-2xl border-2 p-4 transition-colors duration-300",
+                          verification?.etat === "refuse"
+                            ? "border-red-300 bg-red-50"
+                            : "border-iq-sauge bg-iq-sauge/25",
+                        )}
+                      >
+                        <span className="relative flex h-14 w-12 shrink-0 items-center justify-center rounded-md bg-iq-olive text-xs font-extrabold text-white">
+                          PDF
+                          <AnimatePresence>
+                            {verifie && (
+                              <motion.span
+                                className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-iq-citron text-iq-foret ring-2 ring-white"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 600,
+                                  damping: 18,
+                                }}
+                              >
+                                <Check className="size-3" strokeWidth={4} />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <p className="truncate font-bold">{fichier.name}</p>
+                            <AnimatePresence>
+                              {verification?.etat === "ok" && (
+                                <motion.p
+                                  className="shrink-0 font-extrabold text-iq-olive"
+                                  initial={{ opacity: 0, y: 4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0 }}
+                                >
+                                  {t("manager:cours.nbPages", {
+                                    nb: verification.nbPages,
+                                  })}
+                                </motion.p>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          <BarreProgression etat={etatBarre()} />
+                          <p
+                            className="flex items-center gap-1.5 text-sm text-iq-gris"
+                            aria-live="polite"
+                          >
+                            {verifie && (
+                              <CircleCheck className="size-4 text-iq-olive" />
+                            )}
+                            <span>{formaterTaille(fichier.size)}</span>
+                            <span aria-hidden>·</span>
+                            <span
+                              className={clsx(
+                                "tabular-nums",
+                                verifie && "font-semibold text-iq-olive",
+                              )}
+                            >
+                              {statutFichier()}
+                            </span>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-lg p-2 text-iq-gris transition-colors hover:bg-white/70 hover:text-iq-texte disabled:opacity-50"
+                          onClick={retirerFichier}
+                          disabled={isPending}
+                          title={t("manager:cours.retirerFichier")}
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence initial={false}>
+                  {erreurs.fichier && (
+                    <BanniereErreur
+                      key="erreur-fichier"
+                      id={`${id}-fichier-erreur`}
+                      message={traduire(erreurs.fichier) ?? ""}
+                      aide={t(aideErreurImport(erreurs.fichier), {
+                        max: PDF_TAILLE_MAX_MO,
+                      })}
+                      essai={essai}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <label className="flex flex-col gap-2">
+                  <span className="font-bold">{t("manager:cours.titre")}</span>
+                  <input
+                    className={clsx(
+                      champ,
+                      "transition-colors",
+                      erreurs.titre && "border-red-400",
+                    )}
+                    value={titre}
+                    maxLength={TITRE_MAX}
+                    placeholder={t("manager:cours.titrePlaceholder")}
+                    aria-invalid={Boolean(erreurs.titre)}
+                    disabled={isPending}
+                    onChange={(e) => {
+                      setTitre(e.target.value)
+                      setErreurs((er) => ({ ...er, titre: undefined }))
+                    }}
+                  />
+                  {erreurs.titre && (
+                    <span className="animate-fade text-sm font-semibold text-red-600">
+                      {traduire(erreurs.titre)}
+                    </span>
+                  )}
+                </label>
+
+                <label className="flex flex-col gap-2">
+                  <span className="font-bold">
+                    {t("manager:cours.codeRessource")}{" "}
+                    <span className="font-normal text-iq-gris">
+                      {t("manager:cours.facultatif")}
+                    </span>
+                  </span>
+                  <input
+                    className={clsx(
+                      champ,
+                      "transition-colors",
+                      erreurs.codeRessource && "border-red-400",
+                    )}
+                    value={codeRessource}
+                    maxLength={CODE_RESSOURCE_MAX}
+                    placeholder={t("manager:cours.codeRessourcePlaceholder")}
+                    aria-invalid={Boolean(erreurs.codeRessource)}
+                    disabled={isPending}
+                    onChange={(e) => {
+                      setCodeRessource(e.target.value)
+                      setErreurs((er) => ({ ...er, codeRessource: undefined }))
+                    }}
+                  />
+                  {erreurs.codeRessource && (
+                    <span className="animate-fade text-sm font-semibold text-red-600">
+                      {traduire(erreurs.codeRessource)}
+                    </span>
+                  )}
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                <Dialog.Close asChild>
+                  <button
+                    type="button"
+                    className={bouton.contour}
+                    disabled={isPending}
+                  >
+                    {t("common:cancel")}
+                  </button>
+                </Dialog.Close>
+                <button
+                  type="submit"
+                  className={clsx(
+                    bouton.principal,
+                    "min-w-64",
+                    // Pendant l'envoi, le bouton montre le chargement, il ne paraît pas éteint.
+                    isPending && "disabled:cursor-wait disabled:opacity-100",
+                  )}
+                  disabled={enCours}
+                >
+                  {isPending ? (
+                    <>
+                      <Loader className="size-5" />
+                      {t("manager:cours.importEnCours")}
+                      {pourcentage !== null && (
+                        <span className="tabular-nums opacity-80">
+                          {pourcentage} %
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {t("manager:cours.importerEtAjouter")}
+                      <ArrowRight className="size-5" />
+                    </>
+                  )}
                 </button>
               </div>
-            )}
-
-            {erreurs.fichier && (
-              <p
-                id={`${id}-fichier-erreur`}
-                role="alert"
-                className="-mt-3 text-sm font-semibold text-red-600"
-              >
-                {traduire(erreurs.fichier)}
-              </p>
-            )}
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="flex flex-col gap-2">
-                <span className="font-bold">{t("manager:cours.titre")}</span>
-                <input
-                  className={clsx(champ, erreurs.titre && "border-red-400")}
-                  value={titre}
-                  maxLength={TITRE_MAX}
-                  placeholder={t("manager:cours.titrePlaceholder")}
-                  aria-invalid={Boolean(erreurs.titre)}
-                  disabled={isPending}
-                  onChange={(e) => {
-                    setTitre(e.target.value)
-                    setErreurs((er) => ({ ...er, titre: undefined }))
-                  }}
-                />
-                {erreurs.titre && (
-                  <span className="text-sm font-semibold text-red-600">
-                    {traduire(erreurs.titre)}
-                  </span>
-                )}
-              </label>
-
-              <label className="flex flex-col gap-2">
-                <span className="font-bold">
-                  {t("manager:cours.codeRessource")}{" "}
-                  <span className="font-normal text-iq-gris">
-                    {t("manager:cours.facultatif")}
-                  </span>
-                </span>
-                <input
-                  className={clsx(
-                    champ,
-                    erreurs.codeRessource && "border-red-400",
-                  )}
-                  value={codeRessource}
-                  maxLength={CODE_RESSOURCE_MAX}
-                  placeholder={t("manager:cours.codeRessourcePlaceholder")}
-                  aria-invalid={Boolean(erreurs.codeRessource)}
-                  disabled={isPending}
-                  onChange={(e) => {
-                    setCodeRessource(e.target.value)
-                    setErreurs((er) => ({ ...er, codeRessource: undefined }))
-                  }}
-                />
-                {erreurs.codeRessource && (
-                  <span className="text-sm font-semibold text-red-600">
-                    {traduire(erreurs.codeRessource)}
-                  </span>
-                )}
-              </label>
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-3">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className={bouton.contour}
-                  disabled={isPending}
-                >
-                  {t("common:cancel")}
-                </button>
-              </Dialog.Close>
-              <button
-                type="submit"
-                className={bouton.principal}
-                disabled={enCours}
-              >
-                {isPending && <Loader className="size-5" />}
-                {t("manager:cours.importerEtAjouter")}
-                {!isPending && <ArrowRight className="size-5" />}
-              </button>
-            </div>
-          </form>
+            </form>
+          </MotionConfig>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

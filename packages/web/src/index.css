@@ -38,6 +38,9 @@
   --color-iq-saumon: #e7a796;
   --color-iq-ciel: #aac6d6;
   --font-iq: "Montserrat Variable", sans-serif;
+  /* Retours visuels IQ : barre de chargement indéterminée, durée d'un toast */
+  --animate-iq-indetermine: iq-indetermine 1.3s ease-in-out infinite;
+  --animate-iq-decompte: iq-decompte linear forwards;
 
   --animate-fade: fade 150ms ease both;
 }
@@ -293,5 +296,23 @@ button:not(:disabled),
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes iq-indetermine {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes iq-decompte {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
   }
 }

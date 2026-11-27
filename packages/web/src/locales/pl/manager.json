@@ -106,7 +106,20 @@
     "resumeQuiz": "{{nb}} question(s) · {{duree}}",
     "derouleAideQuiz": "Click a + between two pages to drop a quiz there.",
     "questions": "questions",
-    "deQuizEnTout": "of quizzes in total"
+    "deQuizEnTout": "of quizzes in total",
+    "importReussi": "PDF imported successfully",
+    "importReussiDetail": "“{{titre}}” · {{nb}} page(s), ready for your quizzes",
+    "envoiPdf": "Uploading PDF... {{pct}}%",
+    "enregistrementCours": "Saving the course...",
+    "relacher": "Drop your PDF to upload it",
+    "aideFichierManquant": "Drag a PDF into the area above, or click “browse your files”.",
+    "aidePasUnPdf": "Only PDF files are accepted. Export your slides as a PDF from your presentation software, then try again.",
+    "aideTropVolumineux": "Compress the PDF (web-quality images) or split it into several courses under {{max}} MB.",
+    "aidePdfIllisible": "Remove the PDF password, or export it again from the original document.",
+    "aideConnexion": "Your session may have expired: sign in again, then restart the upload.",
+    "aideReessayer": "Check your connection, then restart the upload. Nothing was saved.",
+    "derouleRestaure": "The outline was restored to its last saved state.",
+    "retourMesCours": "Back to your course list."
   },
   "seance": {
     "ouvrirQuiz": "Open a quiz",
